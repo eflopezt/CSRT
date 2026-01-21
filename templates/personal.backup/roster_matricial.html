@@ -4,56 +4,25 @@
 
 {% block extra_css %}
 <style>
-    /* Indicador de mes sticky */
-    .mes-indicator {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 12px 20px;
-        font-size: 1.1rem;
-        font-weight: 600;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        text-align: center;
-        border-radius: 0.25rem;
-        margin-bottom: 10px;
-    }
-    
     .roster-table {
         font-size: 0.85rem;
     }
-    
-    /* Cabecera sticky mejorada */
-    .roster-table thead {
-        position: sticky;
-        top: 50px;
-        z-index: 20;
-    }
-    
     .roster-table th {
         background-color: #2c3e50;
         color: white;
+        position: sticky;
+        top: 0;
+        z-index: 10;
         white-space: nowrap;
         padding: 8px 4px;
         text-align: center;
         border: 1px solid #1a252f;
     }
-    
     .roster-table td {
         padding: 6px 4px;
         text-align: center;
         border: 1px solid #dee2e6;
-        transition: all 0.2s ease;
     }
-    
-    /* Hover effect en filas */
-    .roster-table tbody tr:hover {
-        background-color: #f8f9fa;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        transform: scale(1.001);
-    }
-    
     .col-nombre {
         position: sticky;
         left: 0;
@@ -64,186 +33,90 @@
         font-weight: 500;
         box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     }
-    
     .roster-table thead th.col-nombre {
-        z-index: 25;
+        z-index: 15;
         background-color: #1a252f;
     }
-    
-    .roster-table tbody tr:hover .col-nombre {
-        background-color: #f8f9fa;
-    }
-    
     .col-dias-libres {
         background-color: #e7f3ff;
         font-weight: bold;
-        position: sticky;
-        left: 200px;
-        z-index: 4;
     }
-    
     .col-dias-trabajados {
         background-color: #fff3cd;
         font-weight: bold;
     }
-    
     .codigo-dia {
         min-width: 50px;
         max-width: 60px;
         font-weight: 500;
         padding: 2px !important;
     }
-    
-    /* Colores diferenciados por código */
-    .codigo-T { background-color: #d4edda !important; } /* Verde claro - Trabajo */
-    .codigo-TR { background-color: #d1ecf1 !important; } /* Azul claro - Remoto */
-    .codigo-DL { background-color: #cfe2ff !important; } /* Azul - Día Libre */
-    .codigo-DLA { background-color: #fff3cd !important; } /* Amarillo - DL Acumulado */
-    .codigo-DOL { background-color: #e2e3e5 !important; } /* Gris - Compensación */
-    .codigo-DM { background-color: #f8d7da !important; } /* Rojo claro - Descanso Médico */
-    .codigo-V { background-color: #e7d5ff !important; } /* Morado claro - Vacaciones */
-    .codigo-F { background-color: #ffc107 !important; color: #000; } /* Amarillo fuerte - Feriado */
-    .codigo-FC { background-color: #ffecb5 !important; } /* Amarillo pálido - Feriado Comp */
-    
-    /* Resaltar fines de semana */
-    .dia-sabado { background-color: #f0f0f0 !important; }
-    .dia-domingo { background-color: #e8e8e8 !important; }
-    
-    /* Día actual */
-    .dia-actual {
-        box-shadow: inset 0 0 0 2px #0d6efd;
-        position: relative;
+    .codigo-numerico {
+        background-color: #d4edda;
     }
-    .dia-actual::after {
-        content: '●';
-        position: absolute;
-        top: 2px;
-        right: 2px;
-        color: #0d6efd;
-        font-size: 8px;
+    .codigo-letra {
+        background-color: #f8f9fa;
     }
-    
     .codigo-vacio {
         background-color: #fff;
     }
-    
     .codigo-input {
         width: 100%;
         border: 1px solid #dee2e6;
         padding: 4px 2px;
         text-align: center;
-        font-weight: 600;
+        font-weight: 500;
         text-transform: uppercase;
         font-size: 0.85rem;
-        background-color: transparent;
+        background-color: white;
         cursor: pointer;
-        border-radius: 3px;
-        transition: all 0.2s ease;
     }
-    
-    .codigo-input:hover:not(:disabled) {
-        border-color: #0d6efd;
-        transform: scale(1.05);
-    }
-    
     .codigo-input:focus {
         outline: none;
         border-color: #0d6efd;
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
-    
     .codigo-input:disabled {
         background-color: #e9ecef;
         cursor: not-allowed;
         opacity: 0.6;
     }
-    
     .saving {
         background-color: #fff3cd !important;
-        animation: pulse 1s infinite;
     }
-    
     .saved {
         background-color: #d1e7dd !important;
-        animation: fadeIn 0.5s;
     }
-    
     .error {
         background-color: #f8d7da !important;
-        animation: shake 0.5s;
     }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0.5; }
-        to { opacity: 1; }
-    }
-    
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-    
     .table-container {
         overflow-x: auto;
         max-width: 100%;
         position: relative;
         border: 1px solid #dee2e6;
         border-radius: 0.25rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
-    
     .table-container::-webkit-scrollbar {
         height: 12px;
     }
-    
     .table-container::-webkit-scrollbar-track {
         background: #f1f1f1;
         border-radius: 10px;
     }
-    
     .table-container::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #888;
         border-radius: 10px;
     }
-    
     .table-container::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        background: #555;
     }
-    
     .header-dia {
         writing-mode: vertical-rl;
         transform: rotate(180deg);
         min-height: 60px;
         padding: 4px 2px;
     }
-    
-    /* Botón de modo compacto */
-    .view-mode-toggle {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    
-    /* Modo compacto */
-    .compact-mode .roster-table {
-        font-size: 0.75rem;
-    }
-    .compact-mode .codigo-dia {
-        min-width: 40px;
-        max-width: 40px;
-    }
-    .compact-mode .col-nombre {
-        min-width: 150px;
-    }
-    
     @media print {
         .no-print {
             display: none;
@@ -251,27 +124,15 @@
         .roster-table {
             font-size: 0.7rem;
         }
-        .mes-indicator {
-            position: static;
-        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Indicador de mes sticky -->
-<div class="mes-indicator no-print">
-    <i class="fas fa-calendar-alt me-2"></i>
-    {{ mes_nombre|upper }} {{ anio }}
-</div>
-
 <div class="no-print">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-calendar-check"></i> Roster Matricial</h2>
+        <h2><i class="fas fa-calendar-check"></i> Roster Matricial - {{ mes_nombre }} {{ anio }}</h2>
         <div>
-            <button class="btn btn-outline-secondary me-2" id="toggleCompactMode" title="Alternar modo compacto">
-                <i class="fas fa-compress-alt"></i> Modo Compacto
-            </button>
             <a href="{% url 'roster_import' %}" class="btn btn-success me-2">
                 <i class="fas fa-file-upload"></i> Importar
             </a>
@@ -410,13 +271,14 @@
                         <td class="col-dias-libres dias-pendientes-{{ fila.personal.id }}">{{ fila.dias_libres_pendientes|floatformat:0 }}</td>
                         {% for item in fila.codigos %}
                             <td class="codigo-dia 
-                                codigo-{{ item.codigo|default:'vacio' }}
-                                {% if item.es_sabado %}dia-sabado{% endif %}
-                                {% if item.es_domingo %}dia-domingo{% endif %}
-                                {% if item.es_hoy %}dia-actual{% endif %}
-                            "
-                                data-dia-semana="{{ item.fecha|date:'l' }}"
-                            >
+                                {% if item.codigo == 'T' or item.codigo == 'TR' %}
+                                    codigo-numerico
+                                {% elif item.codigo %}
+                                    codigo-letra
+                                {% else %}
+                                    codigo-vacio
+                                {% endif %}
+                            ">
                                 <select 
                                     class="codigo-input" 
                                     data-personal-id="{{ fila.personal.id }}"
@@ -531,25 +393,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selects = document.querySelectorAll('.codigo-input');
-    const tableContainer = document.querySelector('.table-container');
-    const toggleBtn = document.getElementById('toggleCompactMode');
-    
-    // Toggle modo compacto
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', function() {
-            tableContainer.classList.toggle('compact-mode');
-            const icon = this.querySelector('i');
-            if (tableContainer.classList.contains('compact-mode')) {
-                icon.classList.remove('fa-compress-alt');
-                icon.classList.add('fa-expand-alt');
-                this.innerHTML = '<i class="fas fa-expand-alt"></i> Modo Normal';
-            } else {
-                icon.classList.remove('fa-expand-alt');
-                icon.classList.add('fa-compress-alt');
-                this.innerHTML = '<i class="fas fa-compress-alt"></i> Modo Compacto';
-            }
-        });
-    }
     
     // Obtener CSRF token
     function getCookie(name) {
@@ -573,14 +416,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const td = select.parentElement;
         const valor = select.value.trim().toUpperCase();
         
-        // Remover clases de código anteriores
-        td.classList.remove('codigo-T', 'codigo-TR', 'codigo-DL', 'codigo-DLA', 
-                           'codigo-DOL', 'codigo-DM', 'codigo-V', 'codigo-F', 'codigo-FC', 'codigo-vacio');
+        td.classList.remove('codigo-numerico', 'codigo-letra', 'codigo-vacio');
         
         if (valor === '') {
             td.classList.add('codigo-vacio');
+        } else if (valor === 'T' || valor === 'TR') {
+            td.classList.add('codigo-numerico');
         } else {
-            td.classList.add('codigo-' + valor);
+            td.classList.add('codigo-letra');
         }
     }
     

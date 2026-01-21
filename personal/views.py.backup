@@ -398,21 +398,14 @@ def roster_matricial(request):
     
     # Construir datos para la tabla
     tabla_datos = []
-    fecha_hoy = datetime.now().date()
-    
     for persona in personal_qs:
         # Obtener códigos del mes con sus fechas
         codigos_mes = []
         for fecha in fechas_mes:
             codigo = roster_dict[persona.id].get(fecha, '')
-            # Determinar día de la semana (0=lunes, 6=domingo)
-            dia_semana = fecha.weekday()
             codigos_mes.append({
                 'fecha': fecha,
-                'codigo': codigo,
-                'es_sabado': dia_semana == 5,
-                'es_domingo': dia_semana == 6,
-                'es_hoy': fecha == fecha_hoy
+                'codigo': codigo
             })
         
         # Calcular días libres ganados del mes usando el régimen de turno
