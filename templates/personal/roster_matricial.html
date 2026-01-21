@@ -190,13 +190,15 @@
 
 <div class="card shadow-sm">
     <div class="card-body p-0">
-        <div class="alert alert-info m-3 no-print">
-            <strong><i class="fas fa-info-circle"></i> Leyenda de Códigos:</strong><br>
+        <div class="alert alert-warning border-warning m-3 no-print" style="border-width: 3px; box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);">
+            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> LEYENDA DE CÓDIGOS - LEER ANTES DE INGRESAR</h5>
+            <hr>
             <div class="row">
                 <div class="col-md-6">
-                    • <strong>T</strong>: Trabajo Presencial (días libres según régimen de turno)<br>
-                    • <strong>TR</strong>: Trabajo Remoto (cada 5 genera 2 días libres)<br>
+                    • <strong>T</strong>: Trabajo Presencial<br>
+                    • <strong>TR</strong>: Trabajo Remoto<br>
                     • <strong>DL</strong>: Día Libre<br>
+                    • <strong>DLA</strong>: Día Libre Acumulado (descuenta de días al 31/12/25, máx. 7 consecutivos)<br>
                     • <strong>DOL</strong>: Compensación por Horario Extendido<br>
                     • <strong>DM</strong>: Descanso Médico
                 </div>
@@ -204,8 +206,9 @@
                     • <strong>V</strong>: Vacaciones Aprobadas y/o Gozadas<br>
                     • <strong>F</strong>: Feriado No Recuperable<br>
                     • <strong>FC</strong>: Feriado Compensable<br>
-                    • <strong>Editable:</strong> Haz clic en cualquier celda para editar. Se guarda automáticamente.<br>
-                    • <strong>Cálculo:</strong> Días Libres Pendientes = (Días al 31/12/25 + Ganados) - DL usados
+                    • <strong>Editable:</strong> Selecciona el código de la lista desplegable. Se guarda automáticamente.<br>
+                    • <strong>Cálculo:</strong> Días Libres Pendientes = (Días al 31/12/25 + Ganados) - DL/DLA usados<br>
+                    • <strong>Importante:</strong> DLA solo puede usarse si hay saldo disponible al 31/12/25
                 </div>
             </div>
         </div>
@@ -215,7 +218,7 @@
                 <thead>
                     <tr>
                         <th class="col-nombre">Personal</th>
-                        <th class="col-dias-libres">Días Libres<br>al 31/12/25</th>
+                        <th class="col-dias-libres" title="Días disponibles al 31/12/25 menos los DLA utilizados">Saldo Días<br>al 31/12/25</th>
                         <th class="col-dias-trabajados">Días Libres<br>Ganados</th>
                         <th class="col-dias-libres">Días Libres<br>Pendientes</th>
                         {% for fecha in fechas_mes %}
@@ -232,8 +235,8 @@
                             <strong>{{ fila.personal.apellidos_nombres }}</strong><br>
                             <small class="text-muted">{{ fila.personal.nro_doc }} - {{ fila.personal.area.nombre|default:"-" }}</small>
                         </td>
-                        <td class="col-dias-libres dias-libres-{{ fila.personal.id }}">{{ fila.dias_libres_corte_2025 }}</td>
-                        <td class="col-dias-trabajados dias-ganados-{{ fila.personal.id }}" title="T: {{ fila.count_t }}, TR: {{ fila.count_tr }}, DL usados: {{ fila.count_dl }}">{{ fila.dias_libres_ganados }}</td>
+                        <td class="col-dias-libres dias-libres-{{ fila.personal.id }}" title="Saldo después de descontar {{ fila.count_dla }} DLA">{{ fila.dias_libres_corte_2025 }}</td>
+                        <td class="col-dias-trabajados dias-ganados-{{ fila.personal.id }}" title="T: {{ fila.count_t }}, TR: {{ fila.count_tr }}, DL usados: {{ fila.count_dl }}, DLA usados: {{ fila.count_dla }}">{{ fila.dias_libres_ganados }}</td>
                         <td class="col-dias-libres dias-pendientes-{{ fila.personal.id }}">{{ fila.dias_libres_pendientes|floatformat:0 }}</td>
                         {% for item in fila.codigos %}
                             <td class="codigo-dia 
@@ -245,17 +248,25 @@
                                     codigo-vacio
                                 {% endif %}
                             ">
-                                <input 
-                                    type="text" 
+                                <select 
                                     class="codigo-input" 
-                                    value="{{ item.codigo|default:"" }}"
                                     data-personal-id="{{ fila.personal.id }}"
                                     data-fecha="{{ item.fecha|date:'Y-m-d' }}"
                                     data-fecha-alta="{{ fila.personal.fecha_alta|date:'Y-m-d'|default:'' }}"
-                                    maxlength="10"
-                                    placeholder="-"
+                                    data-dias-corte="{{ fila.dias_libres_corte_2025 }}"
                                     {% if fila.personal.fecha_alta and item.fecha < fila.personal.fecha_alta %}disabled title="Anterior a fecha de alta ({{ fila.personal.fecha_alta|date:'d/m/Y' }})"{% endif %}
                                 >
+                                    <option value="">-</option>
+                                    <option value="T" {% if item.codigo == 'T' %}selected{% endif %}>T</option>
+                                    <option value="TR" {% if item.codigo == 'TR' %}selected{% endif %}>TR</option>
+                                    <option value="DL" {% if item.codigo == 'DL' %}selected{% endif %}>DL</option>
+                                    <option value="DLA" {% if item.codigo == 'DLA' %}selected{% endif %}>DLA</option>
+                                    <option value="DOL" {% if item.codigo == 'DOL' %}selected{% endif %}>DOL</option>
+                                    <option value="DM" {% if item.codigo == 'DM' %}selected{% endif %}>DM</option>
+                                    <option value="V" {% if item.codigo == 'V' %}selected{% endif %}>V</option>
+                                    <option value="F" {% if item.codigo == 'F' %}selected{% endif %}>F</option>
+                                    <option value="FC" {% if item.codigo == 'FC' %}selected{% endif %}>FC</option>
+                                </select>
                             </td>
                         {% endfor %}
                     </tr>
@@ -280,8 +291,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const inputs = document.querySelectorAll('.codigo-input');
-    let saveTimeout = null;
+    const selects = document.querySelectorAll('.codigo-input');
     
     // Obtener CSRF token
     function getCookie(name) {
@@ -301,9 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const csrftoken = getCookie('csrftoken');
     
     // Función para actualizar el color de fondo basado en el código
-    function updateCellColor(input) {
-        const td = input.parentElement;
-        const valor = input.value.trim().toUpperCase();
+    function updateCellColor(select) {
+        const td = select.parentElement;
+        const valor = select.value.trim().toUpperCase();
         
         td.classList.remove('codigo-numerico', 'codigo-letra', 'codigo-vacio');
         
@@ -316,21 +326,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Función para recalcular días (ya no es necesario calcular en cliente, se hace en servidor)
-    function recalcularDiasTrabajados(personalId) {
-        // Esta función ahora solo está como referencia
-        // Los cálculos se hacen en el servidor y se actualizan via JSON
-    }
-    
     // Función para guardar el cambio
-    function guardarCodigo(input) {
-        const personalId = input.dataset.personalId;
-        const fecha = input.dataset.fecha;
-        const codigo = input.value.trim().toUpperCase();
-        const td = input.parentElement;
-        
-        // Actualizar valor en input
-        input.value = codigo;
+    function guardarCodigo(select) {
+        const personalId = select.dataset.personalId;
+        const fecha = select.dataset.fecha;
+        const codigo = select.value.trim().toUpperCase();
+        const td = select.parentElement;
         
         // Mostrar estado de guardado
         td.classList.add('saving');
@@ -353,8 +354,7 @@ document.addEventListener('DOMContentLoaded', function() {
             td.classList.remove('saving');
             if (data.success) {
                 td.classList.add('saved');
-                updateCellColor(input);
-                recalcularDiasTrabajados(personalId);
+                updateCellColor(select);
                 
                 // Actualizar días libres ganados si viene en la respuesta
                 if (data.dias_libres_ganados !== undefined) {
@@ -372,12 +372,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 
+                // Actualizar días al 31/12/25 si viene en la respuesta
+                if (data.dias_libres_corte_2025 !== undefined) {
+                    const cellDiasCorte = document.querySelector(`.dias-libres-${personalId}`);
+                    if (cellDiasCorte) {
+                        cellDiasCorte.textContent = data.dias_libres_corte_2025;
+                    }
+                    // Actualizar el data attribute para futuras validaciones
+                    select.dataset.diasCorte = data.dias_libres_corte_2025;
+                }
+                
                 setTimeout(() => {
                     td.classList.remove('saved');
                 }, 1000);
             } else {
                 td.classList.add('error');
-                alert('Error al guardar: ' + data.error);
+                alert('Error: ' + data.error);
+                // Revertir al valor anterior si hubo error
+                if (data.revert) {
+                    select.value = data.old_value || '';
+                    updateCellColor(select);
+                }
                 setTimeout(() => {
                     td.classList.remove('error');
                 }, 2000);
@@ -387,44 +402,21 @@ document.addEventListener('DOMContentLoaded', function() {
             td.classList.remove('saving');
             td.classList.add('error');
             console.error('Error:', error);
+            alert('Error al guardar el código');
             setTimeout(() => {
                 td.classList.remove('error');
             }, 2000);
         });
     }
     
-    // Event listeners para todos los inputs
-    inputs.forEach(input => {
+    // Event listeners para todos los selects
+    selects.forEach(select => {
         // Inicializar color
-        updateCellColor(input);
+        updateCellColor(select);
         
-        // Al cambiar el valor (blur o enter)
-        input.addEventListener('blur', function() {
-            if (saveTimeout) clearTimeout(saveTimeout);
+        // Al cambiar el valor
+        select.addEventListener('change', function() {
             guardarCodigo(this);
-        });
-        
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.blur();
-            }
-        });
-        
-        // Convertir a mayúsculas al escribir
-        input.addEventListener('input', function() {
-            this.value = this.value.toUpperCase();
-            
-            // Guardar automáticamente después de 1 segundo sin escribir
-            if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                guardarCodigo(this);
-            }, 1000);
-        });
-        
-        // Seleccionar todo al hacer focus
-        input.addEventListener('focus', function() {
-            this.select();
         });
     });
 });

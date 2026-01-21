@@ -401,6 +401,7 @@ def roster_matricial(request):
         count_t = sum(1 for item in codigos_mes if item['codigo'] == 'T')
         count_tr = sum(1 for item in codigos_mes if item['codigo'] == 'TR')
         count_dl = sum(1 for item in codigos_mes if item['codigo'] == 'DL')
+        count_dla = sum(1 for item in codigos_mes if item['codigo'] == 'DLA')
         
         # Calcular factor para T según régimen de turno de la persona
         factor_t = 3  # Por defecto 21x7 -> 21/7 = 3
@@ -424,16 +425,23 @@ def roster_matricial(request):
         # Calcular días libres pendientes totales
         dias_libres_ganados_total = persona.dias_libres_ganados
         dias_dl_usados_total = persona.calcular_dias_dl_usados()
-        dias_libres_pendientes_total = float(persona.dias_libres_corte_2025) + dias_libres_ganados_total - dias_dl_usados_total
+        dias_dla_usados_total = persona.calcular_dias_dla_usados()
+        
+        # Saldo al 31/12/25 después de DLA
+        saldo_corte_2025 = float(persona.dias_libres_corte_2025) - dias_dla_usados_total
+        
+        # Días libres pendientes = saldo del corte + ganados - DL usados
+        dias_libres_pendientes_total = saldo_corte_2025 + dias_libres_ganados_total - dias_dl_usados_total
         
         fila = {
             'personal': persona,
-            'dias_libres_corte_2025': persona.dias_libres_corte_2025,
+            'dias_libres_corte_2025': round(saldo_corte_2025),
             'dias_libres_ganados': dias_libres_ganados_total,
             'dias_libres_pendientes': dias_libres_pendientes_total,
             'count_t': count_t,
             'count_tr': count_tr,
             'count_dl': count_dl,
+            'count_dla': count_dla,
             'codigos': codigos_mes
         }
         tabla_datos.append(fila)
@@ -1022,6 +1030,32 @@ def roster_update_cell(request):
                 'error': f'No se puede registrar antes de la fecha de alta ({personal.fecha_alta.strftime("%d/%m/%Y")})'
             }, status=400)
         
+        # Obtener el código anterior para poder revertir si es necesario
+        roster_anterior = Roster.objects.filter(personal=personal, fecha=fecha).first()
+        codigo_anterior = roster_anterior.codigo if roster_anterior else ''
+        
+        # Validaciones especiales para DLA
+        if codigo == 'DLA':
+            # 1. Validar saldo disponible al 31/12/25
+            es_valido_saldo, mensaje_saldo, saldo = personal.validar_saldo_dla(nueva_dla=True)
+            if not es_valido_saldo:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'No se puede usar DLA. {mensaje_saldo}. El saldo de días al 31/12/25 no puede ser negativo.',
+                    'revert': True,
+                    'old_value': codigo_anterior
+                }, status=400)
+            
+            # 2. Validar máximo 7 días consecutivos
+            es_valido_consecutivos, mensaje_consecutivos = personal.validar_dla_consecutivos(fecha)
+            if not es_valido_consecutivos:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'No se puede usar DLA. {mensaje_consecutivos}',
+                    'revert': True,
+                    'old_value': codigo_anterior
+                }, status=400)
+        
         if codigo:
             # Crear o actualizar roster
             roster, created = Roster.objects.update_or_create(
@@ -1038,14 +1072,21 @@ def roster_update_cell(request):
         # Calcular días libres ganados y pendientes para retornar
         dias_libres_ganados = personal.dias_libres_ganados
         dias_dl_usados = personal.calcular_dias_dl_usados()
-        dias_libres_pendientes = float(personal.dias_libres_corte_2025) + dias_libres_ganados - dias_dl_usados
+        dias_dla_usados = personal.calcular_dias_dla_usados()
+        
+        # Calcular saldo al 31/12/25 después de DLA
+        saldo_corte_2025 = float(personal.dias_libres_corte_2025) - dias_dla_usados
+        
+        # Días pendientes = saldo del corte + ganados - DL usados
+        dias_libres_pendientes = saldo_corte_2025 + dias_libres_ganados - dias_dl_usados
         
         return JsonResponse({
             'success': True,
             'mensaje': mensaje,
             'codigo': codigo,
             'dias_libres_ganados': dias_libres_ganados,
-            'dias_libres_pendientes': round(dias_libres_pendientes)
+            'dias_libres_pendientes': round(dias_libres_pendientes),
+            'dias_libres_corte_2025': round(saldo_corte_2025)
         })
     
     except Personal.DoesNotExist:
