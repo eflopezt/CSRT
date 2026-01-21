@@ -12,9 +12,14 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY or SECRET_KEY.startswith('django-insecure'):
     raise ValueError("DJANGO_SECRET_KEY must be set to a secure value in production")
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = [host for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if host]
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+CSRF_TRUSTED_ORIGINS = [origin for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if origin]
+
+# CORS settings - restrictive in production (optional)
+cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+if cors_origins:
+    CORS_ALLOWED_ORIGINS = [origin for origin in cors_origins.split(',') if origin]
 
 # Security settings
 SECURE_SSL_REDIRECT = True
