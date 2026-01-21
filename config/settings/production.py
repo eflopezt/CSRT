@@ -38,9 +38,6 @@ if DATABASE_URL:
 else:
     raise ValueError("DATABASE_URL environment variable is required in production")
 
-# CORS settings - restrictive in production
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
-
 # Email backend for production
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
