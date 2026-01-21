@@ -5,7 +5,7 @@ import dj_database_url
 from .base import *
 
 # SECURITY
-DEBUG = False
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 # Validate SECRET_KEY
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
@@ -37,6 +37,17 @@ if DATABASE_URL:
     }
 else:
     raise ValueError("DATABASE_URL environment variable is required in production")
+
+# Override cache to use database instead of Redis
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
+    }
+}
+
+# Use database-backed sessions instead of Redis
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # Email backend for production
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
