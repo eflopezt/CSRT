@@ -1015,6 +1015,13 @@ def roster_update_cell(request):
         if not puede_editar_personal(request.user, personal):
             return JsonResponse({'success': False, 'error': 'No tienes permisos para editar este personal'}, status=403)
         
+        # Validar que la fecha no sea anterior a la fecha de alta
+        if personal.fecha_alta and fecha < personal.fecha_alta:
+            return JsonResponse({
+                'success': False, 
+                'error': f'No se puede registrar antes de la fecha de alta ({personal.fecha_alta.strftime("%d/%m/%Y")})'
+            }, status=400)
+        
         if codigo:
             # Crear o actualizar roster
             roster, created = Roster.objects.update_or_create(

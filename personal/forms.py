@@ -48,14 +48,23 @@ class PersonalForm(forms.ModelForm):
             'dias_libres_corte_2025', 'observaciones'
         ]
         widgets = {
-            'fecha_alta': forms.DateInput(attrs={'type': 'date'}),
-            'fecha_cese': forms.DateInput(attrs={'type': 'date'}),
-            'fecha_nacimiento': forms.DateInput(attrs={'type': 'date'}),
+            'fecha_alta': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_cese': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_nacimiento': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'observaciones': forms.Textarea(attrs={'rows': 3}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Asegurar que las fechas se muestren en el formato correcto
+        if self.instance and self.instance.pk:
+            if self.instance.fecha_alta:
+                self.initial['fecha_alta'] = self.instance.fecha_alta.strftime('%Y-%m-%d')
+            if self.instance.fecha_cese:
+                self.initial['fecha_cese'] = self.instance.fecha_cese.strftime('%Y-%m-%d')
+            if self.instance.fecha_nacimiento:
+                self.initial['fecha_nacimiento'] = self.instance.fecha_nacimiento.strftime('%Y-%m-%d')
+        
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
