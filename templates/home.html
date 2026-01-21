@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio - Sistema de Gestión Personal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2"><i class="fas fa-home"></i> Inicio</h1>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Tarjetas de estadísticas -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Gerencias</h6>
+                        <h2 class="mb-0">{{ total_gerencias }}</h2>
+                    </div>
+                    <div class="text-primary">
+                        <i class="fas fa-building fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Áreas</h6>
+                        <h2 class="mb-0">{{ total_areas }}</h2>
+                    </div>
+                    <div class="text-success">
+                        <i class="fas fa-sitemap fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Personal Activo</h6>
+                        <h2 class="mb-0">{{ total_personal }}</h2>
+                    </div>
+                    <div class="text-info">
+                        <i class="fas fa-users fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Roster Hoy</h6>
+                        <h2 class="mb-0">{{ total_roster_hoy }}</h2>
+                    </div>
+                    <div class="text-warning">
+                        <i class="fas fa-calendar-check fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Accesos Rápidos</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{% url 'personal_list' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users text-primary"></i> Ver Personal
+                    </a>
+                    <a href="{% url 'personal_create' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-plus text-success"></i> Agregar Personal
+                    </a>
+                    <a href="{% url 'roster_matricial' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-table text-success"></i> Roster Matricial
+                    </a>
+                    <a href="{% url 'roster_import' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-upload text-primary"></i> Importar Roster
+                    </a>
+                    <a href="{% url 'roster_list' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-alt text-info"></i> Roster Lista
+                    </a>
+                    <a href="{% url 'roster_create' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-plus text-warning"></i> Agregar Registro
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información del Sistema</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Usuario:</strong> {{ user.username }}</p>
+                <p><strong>Nivel de acceso:</strong> {% if user.is_superuser %}Administrador{% else %}Usuario{% endif %}</p>
+                <p><strong>Última conexión:</strong> {{ user.last_login|date:"d/m/Y H:i" }}</p>
+                <hr>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-info-circle"></i> Sistema de Gestión de Personal v1.0
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

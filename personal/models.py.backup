@@ -1,0 +1,392 @@
+"""
+Modelos de datos para el sistema de gestión de personal.
+"""
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
+from decimal import Decimal
+
+
+class Gerencia(models.Model):
+    """
+    Gerencias o departamentos de alto nivel.
+    Cada gerencia tiene un único responsable.
+    """
+    nombre = models.CharField(max_length=150, unique=True, verbose_name="Nombre de Gerencia")
+    responsable = models.OneToOneField(
+        'Personal',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='gerencia_responsable',
+        verbose_name="Responsable",
+        help_text="Persona responsable de esta gerencia"
+    )
+    descripcion = models.TextField(blank=True, verbose_name="Descripción")
+    activa = models.BooleanField(default=True, verbose_name="Activa")
+    
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Gerencia"
+        verbose_name_plural = "Gerencias"
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return self.nombre
+
+
+class Area(models.Model):
+    """
+    Áreas de trabajo bajo una gerencia.
+    """
+    nombre = models.CharField(max_length=150, verbose_name="Nombre de Área")
+    gerencia = models.ForeignKey(
+        Gerencia,
+        on_delete=models.CASCADE,
+        related_name='areas',
+        verbose_name="Gerencia"
+    )
+    descripcion = models.TextField(blank=True, verbose_name="Descripción")
+    activa = models.BooleanField(default=True, verbose_name="Activa")
+    
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Área"
+        verbose_name_plural = "Áreas"
+        ordering = ['gerencia', 'nombre']
+        unique_together = ['nombre', 'gerencia']
+    
+    def __str__(self):
+        return f"{self.gerencia.nombre} - {self.nombre}"
+
+
+class Personal(models.Model):
+    """
+    Personal disponible - tabla principal del sistema.
+    Todo el personal activo figura aquí.
+    """
+    
+    # Opciones para campos
+    TIPO_DOC_CHOICES = [
+        ('DNI', 'DNI'),
+        ('CE', 'Carné de Extranjería'),
+        ('Pasaporte', 'Pasaporte'),
+    ]
+    
+    TIPO_TRAB_CHOICES = [
+        ('Empleado', 'Empleado'),
+        ('Obrero', 'Obrero'),
+    ]
+    
+    SEXO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+    ]
+    
+    ESTADO_CHOICES = [
+        ('Activo', 'Activo'),
+        ('Inactivo', 'Inactivo'),
+        ('Suspendido', 'Suspendido'),
+        ('Cesado', 'Cesado'),
+    ]
+    
+    AFP_CHOICES = [
+        ('Habitat', 'Habitat'),
+        ('Integra', 'Integra'),
+        ('Prima', 'Prima'),
+        ('Profuturo', 'Profuturo'),
+    ]
+    
+    BANCO_CHOICES = [
+        ('BCP', 'BCP'),
+        ('BBVA', 'BBVA'),
+        ('Scotiabank', 'Scotiabank'),
+        ('Interbank', 'Interbank'),
+        ('Banco de la Nación', 'Banco de la Nación'),
+        ('Falabella', 'Falabella'),
+    ]
+    
+    # --- Vinculación con usuario del sistema ---
+    usuario = models.OneToOneField(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="personal_data",
+        verbose_name="Usuario del Sistema",
+        help_text="Cuenta de acceso si aplica"
+    )
+    
+    # --- Datos de identificación ---
+    tipo_doc = models.CharField(
+        max_length=20,
+        choices=TIPO_DOC_CHOICES,
+        default='DNI',
+        verbose_name="Tipo de Documento"
+    )
+    nro_doc = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name="Número de Documento"
+    )
+    apellidos_nombres = models.CharField(
+        max_length=250,
+        verbose_name="Apellidos y Nombres"
+    )
+    codigo_fotocheck = models.CharField(
+        max_length=30,
+        blank=True,
+        verbose_name="Código Fotocheck",
+        help_text="Código de barras del fotocheck"
+    )
+    
+    # --- Datos laborales ---
+    cargo = models.CharField(max_length=150, verbose_name="Cargo")
+    tipo_trab = models.CharField(
+        max_length=20,
+        choices=TIPO_TRAB_CHOICES,
+        verbose_name="Tipo de Trabajador"
+    )
+    area = models.ForeignKey(
+        Area,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='personal_asignado',
+        verbose_name="Área Asignada"
+    )
+    fecha_alta = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Alta"
+    )
+    fecha_cese = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Cese"
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default='Activo',
+        verbose_name="Estado"
+    )
+    
+    # --- Datos personales ---
+    fecha_nacimiento = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Nacimiento"
+    )
+    sexo = models.CharField(
+        max_length=1,
+        choices=SEXO_CHOICES,
+        blank=True,
+        verbose_name="Sexo"
+    )
+    celular = models.CharField(max_length=20, blank=True, verbose_name="Celular")
+    correo_personal = models.EmailField(blank=True, verbose_name="Correo Personal")
+    correo_corporativo = models.EmailField(blank=True, verbose_name="Correo Corporativo")
+    direccion = models.CharField(max_length=300, blank=True, verbose_name="Dirección")
+    ubigeo = models.CharField(max_length=100, blank=True, verbose_name="Ubigeo")
+    
+    # --- Datos financieros ---
+    afp = models.CharField(
+        max_length=20,
+        choices=AFP_CHOICES,
+        blank=True,
+        verbose_name="AFP"
+    )
+    banco = models.CharField(
+        max_length=30,
+        choices=BANCO_CHOICES,
+        blank=True,
+        verbose_name="Banco"
+    )
+    cuenta_ahorros = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Cuenta de Ahorros"
+    )
+    cuenta_cci = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Cuenta CCI"
+    )
+    cuenta_cts = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Cuenta CTS"
+    )
+    
+    # --- Datos económicos ---
+    sueldo_base = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name="Sueldo Base"
+    )
+    bonos = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name="Bonos"
+    )
+    
+    # --- Régimen laboral ---
+    regimen_laboral = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Régimen Laboral"
+    )
+    regimen_turno = models.CharField(
+        max_length=30,
+        blank=True,
+        verbose_name="Régimen de Turno",
+        help_text="Ej: 14x7, 21x7, etc."
+    )
+    
+    # --- Roster ---
+    dias_libres_ganados = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        default=0,
+        validators=[MinValueValidator(Decimal('0.0'))],
+        verbose_name="Días Libres Ganados",
+        help_text="Acumulado de días libres antes del corte"
+    )
+    
+    # --- Observaciones ---
+    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
+    
+    # --- Metadatos ---
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Personal"
+        verbose_name_plural = "Personal"
+        ordering = ['apellidos_nombres']
+        indexes = [
+            models.Index(fields=['nro_doc']),
+            models.Index(fields=['estado']),
+            models.Index(fields=['area']),
+        ]
+    
+    def __str__(self):
+        return f"{self.apellidos_nombres} ({self.nro_doc})"
+    
+    @property
+    def nombre_completo(self):
+        return self.apellidos_nombres
+    
+    @property
+    def esta_activo(self):
+        return self.estado == 'Activo'
+
+
+class Roster(models.Model):
+    """
+    Programación de turnos del personal por día.
+    """
+    personal = models.ForeignKey(
+        Personal,
+        on_delete=models.CASCADE,
+        related_name='roster_dias',
+        verbose_name="Personal"
+    )
+    fecha = models.DateField(verbose_name="Fecha")
+    codigo = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Código de Turno",
+        help_text="Código del turno asignado"
+    )
+    
+    # --- Información adicional ---
+    observaciones = models.CharField(
+        max_length=300,
+        blank=True,
+        verbose_name="Observaciones"
+    )
+    fuente = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Fuente",
+        help_text="Origen del registro (archivo, usuario, etc.)"
+    )
+    
+    # --- Metadatos ---
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Roster"
+        verbose_name_plural = "Roster"
+        ordering = ['fecha', 'personal']
+        unique_together = ['personal', 'fecha']
+        indexes = [
+            models.Index(fields=['personal', 'fecha']),
+            models.Index(fields=['fecha']),
+        ]
+    
+    def __str__(self):
+        return f"{self.personal} - {self.fecha} - {self.codigo}"
+
+
+class RosterAudit(models.Model):
+    """
+    Auditoría de cambios en el roster.
+    Registra todas las modificaciones realizadas.
+    """
+    personal = models.ForeignKey(
+        Personal,
+        on_delete=models.CASCADE,
+        related_name='roster_audits',
+        verbose_name="Personal"
+    )
+    fecha = models.DateField(verbose_name="Fecha del Registro")
+    
+    campo_modificado = models.CharField(
+        max_length=50,
+        verbose_name="Campo Modificado",
+        help_text="Nombre del campo que fue modificado"
+    )
+    valor_anterior = models.TextField(
+        blank=True,
+        verbose_name="Valor Anterior"
+    )
+    valor_nuevo = models.TextField(
+        blank=True,
+        verbose_name="Valor Nuevo"
+    )
+    
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Usuario que realizó el cambio"
+    )
+    
+    creado_en = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Auditoría")
+    
+    class Meta:
+        verbose_name = "Auditoría de Roster"
+        verbose_name_plural = "Auditorías de Roster"
+        ordering = ['-creado_en']
+        indexes = [
+            models.Index(fields=['personal', 'fecha']),
+            models.Index(fields=['-creado_en']),
+        ]
+    
+    def __str__(self):
+        return f"{self.personal} - {self.fecha} - {self.campo_modificado}"

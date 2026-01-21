@@ -1,0 +1,413 @@
+{% extends 'base.html' %}
+
+{% block title %}Roster Matricial - {{ mes_nombre }} {{ anio }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .roster-table {
+        font-size: 0.85rem;
+    }
+    .roster-table th {
+        background-color: #f8f9fa;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        white-space: nowrap;
+        padding: 8px 4px;
+        text-align: center;
+    }
+    .roster-table td {
+        padding: 6px 4px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+    }
+    .col-nombre {
+        position: sticky;
+        left: 0;
+        background-color: white;
+        z-index: 5;
+        text-align: left;
+        min-width: 200px;
+        font-weight: 500;
+    }
+    .col-dias-libres {
+        background-color: #e7f3ff;
+        font-weight: bold;
+    }
+    .col-dias-trabajados {
+        background-color: #fff3cd;
+        font-weight: bold;
+    }
+    .codigo-dia {
+        min-width: 35px;
+        font-weight: 500;
+    }
+    .codigo-numerico {
+        background-color: #d4edda;
+    }
+    .codigo-letra {
+        background-color: #f8f9fa;
+    }
+    .codigo-vacio {
+        background-color: #fff;
+    }
+    .codigo-input {
+        width: 100%;
+        border: 1px solid #dee2e6;
+        padding: 4px;
+        text-align: center;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    .codigo-input:focus {
+        outline: none;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .saving {
+        background-color: #fff3cd !important;
+    }
+    .saved {
+        background-color: #d1e7dd !important;
+    }
+    .error {
+        background-color: #f8d7da !important;
+    }
+    .table-container {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .header-dia {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        min-height: 60px;
+        padding: 4px 2px;
+    }
+    @media print {
+        .no-print {
+            display: none;
+        }
+        .roster-table {
+            font-size: 0.7rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="no-print">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-calendar-check"></i> Roster Matricial - {{ mes_nombre }} {{ anio }}</h2>
+        <div>
+            <a href="{% url 'roster_import' %}" class="btn btn-success me-2">
+                <i class="fas fa-file-upload"></i> Importar
+            </a>
+            <a href="{% url 'roster_export' %}?mes={{ mes }}&anio={{ anio }}" class="btn btn-success me-2">
+                <i class="fas fa-file-excel"></i> Exportar
+            </a>
+            <button onclick="window.print()" class="btn btn-secondary me-2">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+            <a href="{% url 'roster_list' %}" class="btn btn-info">
+                <i class="fas fa-list"></i> Vista Lista
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Mes:</label>
+                    <select name="mes" class="form-select">
+                        {% for m_num, m_nombre in meses %}
+                            <option value="{{ m_num }}" {% if m_num == mes %}selected{% endif %}>{{ m_nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Año:</label>
+                    <select name="anio" class="form-select">
+                        {% for a in anios %}
+                            <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Área:</label>
+                    <select name="area" class="form-select">
+                        <option value="">Todas las áreas</option>
+                        {% for a in areas %}
+                            <option value="{{ a.id }}" {% if area_id == a.id|stringformat:"s" %}selected{% endif %}>
+                                {{ a.gerencia.nombre }} - {{ a.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Buscar:</label>
+                    <input type="text" name="buscar" class="form-control" placeholder="DNI o nombre..." value="{{ buscar }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="alert alert-info m-3 no-print">
+            <strong><i class="fas fa-info-circle"></i> Leyenda de Códigos:</strong><br>
+            <div class="row">
+                <div class="col-md-6">
+                    • <strong>T</strong>: Trabajo Presencial (cada 3 genera 1 día libre)<br>
+                    • <strong>TR</strong>: Trabajo Remoto (cada 5 genera 2 días libres)<br>
+                    • <strong>DL</strong>: Día Libre<br>
+                    • <strong>DOL</strong>: Compensación por Horario Extendido<br>
+                    • <strong>DM</strong>: Descanso Médico
+                </div>
+                <div class="col-md-6">
+                    • <strong>V</strong>: Vacaciones Aprobadas y/o Gozadas<br>
+                    • <strong>F</strong>: Feriado No Recuperable<br>
+                    • <strong>FC</strong>: Feriado Compensable<br>
+                    • <strong>Editable:</strong> Haz clic en cualquier celda para editar. Se guarda automáticamente.
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="table table-bordered table-sm roster-table mb-0">
+                <thead>
+                    <tr>
+                        <th class="col-nombre">Personal</th>
+                        <th class="col-dias-libres">Días Libres<br>al 31/12/25</th>
+                        <th class="col-dias-trabajados">Días<br>Trabajados</th>
+                        <th class="col-dias-libres">Días Libres<br>Pendientes</th>
+                        {% for fecha in fechas_mes %}
+                            <th class="codigo-dia">
+                                <div class="header-dia">{{ fecha|date:"d" }}</div>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in tabla_datos %}
+                    <tr>
+                        <td class="col-nombre">
+                            <strong>{{ fila.personal.apellidos_nombres }}</strong><br>
+                            <small class="text-muted">{{ fila.personal.nro_doc }} - {{ fila.personal.area.nombre|default:"-" }}</small>
+                        </td>
+                        <td class="col-dias-libres dias-libres-{{ fila.personal.id }}">{{ fila.dias_libres_corte_2025 }}</td>
+                        <td class="col-dias-trabajados dias-trabajados-{{ fila.personal.id }}" title="T: {{ fila.count_t }}, TR: {{ fila.count_tr }}">{{ fila.dias_trabajados }}</td>
+                        <td class="col-dias-libres dias-pendientes-{{ fila.personal.id }}">{{ fila.dias_libres_pendientes }}</td>
+                        {% for item in fila.codigos %}
+                            <td class="codigo-dia 
+                                {% if item.codigo == 'T' or item.codigo == 'TR' %}
+                                    codigo-numerico
+                                {% elif item.codigo %}
+                                    codigo-letra
+                                {% else %}
+                                    codigo-vacio
+                                {% endif %}
+                            ">
+                                <input 
+                                    type="text" 
+                                    class="codigo-input" 
+                                    value="{{ item.codigo|default:"" }}"
+                                    data-personal-id="{{ fila.personal.id }}"
+                                    data-fecha="{{ item.fecha|date:'Y-m-d' }}"
+                                    maxlength="10"
+                                    placeholder="-"
+                                >
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ fechas_mes|length|add:3 }}" class="text-center text-muted py-4">
+                            No hay personal activo para mostrar
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3 no-print">
+    <a href="{% url 'home' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver al Inicio
+    </a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.codigo-input');
+    let saveTimeout = null;
+    
+    // Obtener CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    
+    // Función para actualizar el color de fondo basado en el código
+    function updateCellColor(input) {
+        const td = input.parentElement;
+        const valor = input.value.trim().toUpperCase();
+        
+        td.classList.remove('codigo-numerico', 'codigo-letra', 'codigo-vacio');
+        
+        if (valor === '') {
+            td.classList.add('codigo-vacio');
+        } else if (valor === 'T' || valor === 'TR') {
+            td.classList.add('codigo-numerico');
+        } else {
+            td.classList.add('codigo-letra');
+        }
+    }
+    
+    // Función para recalcular días trabajados
+    function recalcularDiasTrabajados(personalId) {
+        const inputsPersonal = document.querySelectorAll(`input[data-personal-id="${personalId}"]`);
+        let countT = 0;
+        let countTR = 0;
+        
+        inputsPersonal.forEach(inp => {
+            const valor = inp.value.trim().toUpperCase();
+            if (valor === 'T') {
+                countT++;
+            } else if (valor === 'TR') {
+                countTR++;
+            }
+        });
+        
+        // T: cada 3 genera 1 día libre, TR: cada 5 genera 2 días libres
+        const diasLibresT = Math.floor(countT / 3);
+        const diasLibresTR = Math.floor(countTR / 5) * 2;
+        const diasTrabajados = diasLibresT + diasLibresTR;
+        
+        const cellDiasTrabajados = document.querySelector(`.dias-trabajados-${personalId}`);
+        if (cellDiasTrabajados) {
+            cellDiasTrabajados.textContent = diasTrabajados;
+            cellDiasTrabajados.title = `T: ${countT}, TR: ${countTR}`;
+        }
+    }
+    
+    // Función para guardar el cambio
+    function guardarCodigo(input) {
+        const personalId = input.dataset.personalId;
+        const fecha = input.dataset.fecha;
+        const codigo = input.value.trim().toUpperCase();
+        const td = input.parentElement;
+        
+        // Actualizar valor en input
+        input.value = codigo;
+        
+        // Mostrar estado de guardado
+        td.classList.add('saving');
+        
+        // Enviar al servidor
+        fetch('{% url "roster_update_cell" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                personal_id: personalId,
+                fecha: fecha,
+                codigo: codigo
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            td.classList.remove('saving');
+            if (data.success) {
+                td.classList.add('saved');
+                updateCellColor(input);
+                recalcularDiasTrabajados(personalId);
+                
+                // Actualizar días libres pendientes si viene en la respuesta
+                if (data.dias_libres_pendientes !== undefined) {
+                    const cellDiasLibres = document.querySelector(`.dias-libres-${personalId}`);
+                    if (cellDiasLibres) {
+                        cellDiasLibres.textContent = data.dias_libres_pendientes;
+                    }
+                }
+                
+                setTimeout(() => {
+                    td.classList.remove('saved');
+                }, 1000);
+            } else {
+                td.classList.add('error');
+                alert('Error al guardar: ' + data.error);
+                setTimeout(() => {
+                    td.classList.remove('error');
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            td.classList.remove('saving');
+            td.classList.add('error');
+            console.error('Error:', error);
+            setTimeout(() => {
+                td.classList.remove('error');
+            }, 2000);
+        });
+    }
+    
+    // Event listeners para todos los inputs
+    inputs.forEach(input => {
+        // Inicializar color
+        updateCellColor(input);
+        
+        // Al cambiar el valor (blur o enter)
+        input.addEventListener('blur', function() {
+            if (saveTimeout) clearTimeout(saveTimeout);
+            guardarCodigo(this);
+        });
+        
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+        
+        // Convertir a mayúsculas al escribir
+        input.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+            
+            // Guardar automáticamente después de 1 segundo sin escribir
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                guardarCodigo(this);
+            }, 1000);
+        });
+        
+        // Seleccionar todo al hacer focus
+        input.addEventListener('focus', function() {
+            this.select();
+        });
+    });
+});
+</script>
+{% endblock %}

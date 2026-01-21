@@ -1,0 +1,125 @@
+"""
+API Views para el módulo personal usando Django REST Framework.
+"""
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .models import Gerencia, Area, Personal, Roster, RosterAudit
+from .serializers import (
+    GerenciaSerializer, AreaSerializer,
+    PersonalListSerializer, PersonalDetailSerializer, PersonalCreateUpdateSerializer,
+    RosterSerializer, RosterBulkCreateSerializer, RosterAuditSerializer
+)
+
+
+class GerenciaViewSet(viewsets.ModelViewSet):
+    """ViewSet para Gerencias."""
+    queryset = Gerencia.objects.all()
+    serializer_class = GerenciaSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['activa']
+    search_fields = ['nombre', 'responsable__apellidos_nombres']
+    ordering_fields = ['nombre', 'creado_en']
+    ordering = ['nombre']
+
+
+class AreaViewSet(viewsets.ModelViewSet):
+    """ViewSet para Áreas."""
+    queryset = Area.objects.select_related('gerencia').all()
+    serializer_class = AreaSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['gerencia', 'activa']
+    search_fields = ['nombre', 'gerencia__nombre']
+    ordering_fields = ['nombre', 'gerencia__nombre', 'creado_en']
+    ordering = ['gerencia__nombre', 'nombre']
+
+
+class PersonalViewSet(viewsets.ModelViewSet):
+    """ViewSet para Personal."""
+    queryset = Personal.objects.select_related('area', 'area__gerencia', 'usuario').all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['estado', 'tipo_trab', 'area', 'area__gerencia']
+    search_fields = ['apellidos_nombres', 'nro_doc', 'cargo', 'celular']
+    ordering_fields = ['apellidos_nombres', 'fecha_alta', 'creado_en']
+    ordering = ['apellidos_nombres']
+    
+    def get_serializer_class(self):
+        """Usar diferentes serializers según la acción."""
+        if self.action == 'list':
+            return PersonalListSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return PersonalCreateUpdateSerializer
+        return PersonalDetailSerializer
+    
+    @action(detail=False, methods=['get'])
+    def activos(self, request):
+        """Endpoint para obtener solo personal activo."""
+        personal_activo = self.queryset.filter(estado='Activo')
+        serializer = self.get_serializer(personal_activo, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def roster(self, request, pk=None):
+        """Obtener roster de un personal específico."""
+        personal = self.get_object()
+        roster = Roster.objects.filter(personal=personal).order_by('-fecha')[:30]
+        serializer = RosterSerializer(roster, many=True)
+        return Response(serializer.data)
+
+
+class RosterViewSet(viewsets.ModelViewSet):
+    """ViewSet para Roster."""
+    queryset = Roster.objects.select_related('personal', 'personal__area').all()
+    serializer_class = RosterSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['personal', 'fecha', 'personal__area']
+    search_fields = ['personal__apellidos_nombres', 'personal__nro_doc', 'codigo']
+    ordering_fields = ['fecha', 'personal__apellidos_nombres']
+    ordering = ['-fecha', 'personal__apellidos_nombres']
+    
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """Creación masiva de registros de roster."""
+        serializer = RosterBulkCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {'mensaje': 'Registros creados exitosamente'},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'])
+    def por_rango(self, request):
+        """Obtener roster por rango de fechas."""
+        fecha_desde = request.query_params.get('fecha_desde')
+        fecha_hasta = request.query_params.get('fecha_hasta')
+        
+        if not fecha_desde or not fecha_hasta:
+            return Response(
+                {'error': 'Debe proporcionar fecha_desde y fecha_hasta'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        roster = self.queryset.filter(fecha__range=[fecha_desde, fecha_hasta])
+        serializer = self.get_serializer(roster, many=True)
+        return Response(serializer.data)
+
+
+class RosterAuditViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet para auditoría de Roster (solo lectura)."""
+    queryset = RosterAudit.objects.select_related('personal', 'usuario').all()
+    serializer_class = RosterAuditSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['personal', 'fecha', 'campo_modificado']
+    search_fields = ['personal__apellidos_nombres', 'personal__nro_doc']
+    ordering_fields = ['creado_en']
+    ordering = ['-creado_en']

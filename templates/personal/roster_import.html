@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Importar Roster{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-file-upload"></i> Importar Roster desde Excel
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Formato del archivo Excel:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Columnas obligatorias:</strong> DNI, Apellidos y Nombres</li>
+                        <li><strong>Columnas de días:</strong> Día 01, Día 02, Día 03... Día 31</li>
+                        <li><strong>Códigos numéricos:</strong> 1, 2, 3 (días trabajados)</li>
+                        <li><strong>Códigos alfabéticos:</strong> DL (días libres), V (vacaciones), P (permiso), etc.</li>
+                        <li>El personal debe estar previamente registrado en el sistema</li>
+                        <li>El mes/año será el actual (puedes cambiarlo después en la vista matricial)</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    Si ya existen registros para las mismas fechas, serán <strong>actualizados</strong> con los nuevos valores.
+                </div>
+
+                {% crispy form %}
+
+                <hr>
+
+                <h6><i class="fas fa-download"></i> Plantilla de ejemplo:</h6>
+                <p class="text-muted">Descarga esta plantilla de Excel como referencia:</p>
+                <a href="{% url 'roster_export' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-excel"></i> Descargar Plantilla Actual
+                </a>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <a href="{% url 'roster_matricial' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver al Roster
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
