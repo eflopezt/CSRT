@@ -4,11 +4,10 @@
 
 {% block extra_css %}
 <style>
-    /* Indicador de mes sticky */
+    /* Indicador de mes - NO sticky para evitar conflictos */
     .mes-indicator {
-        position: sticky;
-        top: 0;
-        z-index: 100;
+        position: relative;
+        z-index: 10;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 12px 20px;
@@ -27,7 +26,7 @@
     /* Cabecera sticky mejorada */
     .roster-table thead {
         position: sticky;
-        top: 60px;
+        top: 0;
         z-index: 20;
     }
     
