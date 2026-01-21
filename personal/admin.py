@@ -2,7 +2,36 @@
 Configuración del admin para el módulo personal.
 """
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 from .models import Gerencia, Area, Personal, Roster, RosterAudit
+from .user_models import UserProfile
+
+
+# Inline para mostrar el perfil dentro del admin de User
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Perfil con DNI'
+    fk_name = 'user'
+
+
+# Extender el UserAdmin para incluir el perfil
+class UserAdmin(BaseUserAdmin):
+    inlines = (UserProfileInline,)
+    list_display = ['username', 'email', 'first_name', 'last_name', 'get_dni', 'is_staff']
+    
+    def get_dni(self, obj):
+        try:
+            return obj.profile.dni
+        except UserProfile.DoesNotExist:
+            return '-'
+    get_dni.short_description = 'DNI'
+
+
+# Re-registrar UserAdmin
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
 
 
 @admin.register(Gerencia)
