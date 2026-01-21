@@ -44,8 +44,7 @@ class PersonalForm(forms.ModelForm):
             'tipo_doc', 'nro_doc', 'apellidos_nombres', 'codigo_fotocheck',
             'cargo', 'tipo_trab', 'area', 'fecha_alta', 'fecha_cese', 'estado',
             'fecha_nacimiento', 'sexo', 'celular', 'correo_personal', 'correo_corporativo',
-            'direccion', 'ubigeo', 'afp', 'banco', 'cuenta_ahorros', 'cuenta_cci',
-            'cuenta_cts', 'sueldo_base', 'bonos', 'regimen_laboral', 'regimen_turno',
+            'direccion', 'ubigeo', 'regimen_laboral', 'regimen_turno',
             'dias_libres_corte_2025', 'observaciones'
         ]
         widgets = {

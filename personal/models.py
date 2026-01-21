@@ -264,24 +264,65 @@ class Personal(models.Model):
         help_text="Días libres acumulados al corte del 31 de diciembre de 2025 (valor manual)"
     )
 
-    def calcular_dias_libres_pendientes(self):
+    def calcular_dias_libres_ganados(self):
         """
-        Calcula días libres pendientes basados en T y TR históricos.
-        T: 1 día libre por cada 3 días T
-        TR: 2 días libres por cada 5 días TR
+        Calcula días libres ganados basados en el régimen de turno.
+        Por ejemplo:
+        - 21x7: cada 3 días T genera 1 día libre (21/7 = 3)
+        - 15x3: cada 5 días T genera 1 día libre (15/3 = 5)
+        - TR siempre es 5x2: cada 5 días TR genera 2 días libres
+        
+        Acumula fracciones y redondea al entero más próximo al final.
         """
         rosters = Roster.objects.filter(personal=self)
         count_t = rosters.filter(codigo="T").count()
         count_tr = rosters.filter(codigo="TR").count()
         
-        dias_libres_t = count_t // 3
-        dias_libres_tr = (count_tr // 5) * 2
-        return dias_libres_t + dias_libres_tr
+        # Calcular factor para T según régimen de turno
+        factor_t = 3  # Por defecto 21x7 -> 21/7 = 3
+        if self.regimen_turno:
+            try:
+                # Extraer días de trabajo y descanso del formato "NxM"
+                partes = self.regimen_turno.strip().split('x')
+                if len(partes) == 2:
+                    dias_trabajo = int(partes[0])
+                    dias_descanso = int(partes[1])
+                    if dias_descanso > 0:
+                        factor_t = dias_trabajo / dias_descanso
+            except (ValueError, ZeroDivisionError):
+                pass  # Usar factor por defecto
+        
+        # TR siempre es 5x2 (cada 5 días genera 2 libres)
+        factor_tr = 5.0 / 2.0  # 2.5 días TR por cada día libre
+        
+        # Calcular días libres con decimales
+        dias_libres_de_t = count_t / factor_t
+        dias_libres_de_tr = count_tr / factor_tr
+        
+        # Sumar y redondear al entero más próximo
+        total_dias_libres = round(dias_libres_de_t + dias_libres_de_tr)
+        
+        return total_dias_libres
+
+    def calcular_dias_dl_usados(self):
+        """
+        Calcula cuántos días DL ha usado el personal en el roster.
+        """
+        return Roster.objects.filter(personal=self, codigo="DL").count()
 
     @property
+    def dias_libres_ganados(self):
+        """Propiedad para obtener días libres ganados."""
+        return self.calcular_dias_libres_ganados()
+    
+    @property
     def dias_libres_pendientes(self):
-        """Propiedad para obtener días libres pendientes calculados."""
-        return self.calcular_dias_libres_pendientes()
+        """
+        Días Libres Pendientes = (Días Libres al 31/12/25 + Días Libres Ganados) - Días DL usados
+        """
+        dias_ganados = self.calcular_dias_libres_ganados()
+        dias_usados = self.calcular_dias_dl_usados()
+        return float(self.dias_libres_corte_2025) + dias_ganados - dias_usados
     
     # --- Observaciones ---
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")

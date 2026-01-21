@@ -7,6 +7,11 @@ from .base import *
 # SECURITY
 DEBUG = False
 
+# Validate SECRET_KEY
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY or SECRET_KEY.startswith('django-insecure'):
+    raise ValueError("DJANGO_SECRET_KEY must be set to a secure value in production")
+
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
 
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')

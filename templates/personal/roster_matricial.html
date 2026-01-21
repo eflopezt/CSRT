@@ -165,7 +165,7 @@
             <strong><i class="fas fa-info-circle"></i> Leyenda de Códigos:</strong><br>
             <div class="row">
                 <div class="col-md-6">
-                    • <strong>T</strong>: Trabajo Presencial (cada 3 genera 1 día libre)<br>
+                    • <strong>T</strong>: Trabajo Presencial (días libres según régimen de turno)<br>
                     • <strong>TR</strong>: Trabajo Remoto (cada 5 genera 2 días libres)<br>
                     • <strong>DL</strong>: Día Libre<br>
                     • <strong>DOL</strong>: Compensación por Horario Extendido<br>
@@ -175,7 +175,8 @@
                     • <strong>V</strong>: Vacaciones Aprobadas y/o Gozadas<br>
                     • <strong>F</strong>: Feriado No Recuperable<br>
                     • <strong>FC</strong>: Feriado Compensable<br>
-                    • <strong>Editable:</strong> Haz clic en cualquier celda para editar. Se guarda automáticamente.
+                    • <strong>Editable:</strong> Haz clic en cualquier celda para editar. Se guarda automáticamente.<br>
+                    • <strong>Cálculo:</strong> Días Libres Pendientes = (Días al 31/12/25 + Ganados) - DL usados
                 </div>
             </div>
         </div>
@@ -186,7 +187,7 @@
                     <tr>
                         <th class="col-nombre">Personal</th>
                         <th class="col-dias-libres">Días Libres<br>al 31/12/25</th>
-                        <th class="col-dias-trabajados">Días<br>Trabajados</th>
+                        <th class="col-dias-trabajados">Días Libres<br>Ganados</th>
                         <th class="col-dias-libres">Días Libres<br>Pendientes</th>
                         {% for fecha in fechas_mes %}
                             <th class="codigo-dia">
@@ -203,8 +204,8 @@
                             <small class="text-muted">{{ fila.personal.nro_doc }} - {{ fila.personal.area.nombre|default:"-" }}</small>
                         </td>
                         <td class="col-dias-libres dias-libres-{{ fila.personal.id }}">{{ fila.dias_libres_corte_2025 }}</td>
-                        <td class="col-dias-trabajados dias-trabajados-{{ fila.personal.id }}" title="T: {{ fila.count_t }}, TR: {{ fila.count_tr }}">{{ fila.dias_trabajados }}</td>
-                        <td class="col-dias-libres dias-pendientes-{{ fila.personal.id }}">{{ fila.dias_libres_pendientes }}</td>
+                        <td class="col-dias-trabajados dias-ganados-{{ fila.personal.id }}" title="T: {{ fila.count_t }}, TR: {{ fila.count_tr }}, DL usados: {{ fila.count_dl }}">{{ fila.dias_libres_ganados }}</td>
+                        <td class="col-dias-libres dias-pendientes-{{ fila.personal.id }}">{{ fila.dias_libres_pendientes|floatformat:0 }}</td>
                         {% for item in fila.codigos %}
                             <td class="codigo-dia 
                                 {% if item.codigo == 'T' or item.codigo == 'TR' %}
@@ -284,31 +285,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Función para recalcular días trabajados
+    // Función para recalcular días (ya no es necesario calcular en cliente, se hace en servidor)
     function recalcularDiasTrabajados(personalId) {
-        const inputsPersonal = document.querySelectorAll(`input[data-personal-id="${personalId}"]`);
-        let countT = 0;
-        let countTR = 0;
-        
-        inputsPersonal.forEach(inp => {
-            const valor = inp.value.trim().toUpperCase();
-            if (valor === 'T') {
-                countT++;
-            } else if (valor === 'TR') {
-                countTR++;
-            }
-        });
-        
-        // T: cada 3 genera 1 día libre, TR: cada 5 genera 2 días libres
-        const diasLibresT = Math.floor(countT / 3);
-        const diasLibresTR = Math.floor(countTR / 5) * 2;
-        const diasTrabajados = diasLibresT + diasLibresTR;
-        
-        const cellDiasTrabajados = document.querySelector(`.dias-trabajados-${personalId}`);
-        if (cellDiasTrabajados) {
-            cellDiasTrabajados.textContent = diasTrabajados;
-            cellDiasTrabajados.title = `T: ${countT}, TR: ${countTR}`;
-        }
+        // Esta función ahora solo está como referencia
+        // Los cálculos se hacen en el servidor y se actualizan via JSON
     }
     
     // Función para guardar el cambio
@@ -345,11 +325,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateCellColor(input);
                 recalcularDiasTrabajados(personalId);
                 
+                // Actualizar días libres ganados si viene en la respuesta
+                if (data.dias_libres_ganados !== undefined) {
+                    const cellDiasGanados = document.querySelector(`.dias-ganados-${personalId}`);
+                    if (cellDiasGanados) {
+                        cellDiasGanados.textContent = data.dias_libres_ganados;
+                    }
+                }
+                
                 // Actualizar días libres pendientes si viene en la respuesta
                 if (data.dias_libres_pendientes !== undefined) {
-                    const cellDiasLibres = document.querySelector(`.dias-libres-${personalId}`);
-                    if (cellDiasLibres) {
-                        cellDiasLibres.textContent = data.dias_libres_pendientes;
+                    const cellDiasPendientes = document.querySelector(`.dias-pendientes-${personalId}`);
+                    if (cellDiasPendientes) {
+                        cellDiasPendientes.textContent = data.dias_libres_pendientes;
                     }
                 }
                 

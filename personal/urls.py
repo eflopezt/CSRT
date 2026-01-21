@@ -11,17 +11,21 @@ urlpatterns = [
     
     # Auth
     path('login/', auth_views.LoginView.as_view(), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', views.logout_view, name='logout'),
     
     # Gerencias
     path('gerencias/', views.gerencia_list, name='gerencia_list'),
     path('gerencias/crear/', views.gerencia_create, name='gerencia_create'),
     path('gerencias/<int:pk>/editar/', views.gerencia_update, name='gerencia_update'),
+    path('gerencias/exportar/', views.gerencia_export, name='gerencia_export'),
+    path('gerencias/importar/', views.gerencia_import, name='gerencia_import'),
     
     # Áreas
     path('areas/', views.area_list, name='area_list'),
     path('areas/crear/', views.area_create, name='area_create'),
     path('areas/<int:pk>/editar/', views.area_update, name='area_update'),
+    path('areas/exportar/', views.area_export, name='area_export'),
+    path('areas/importar/', views.area_import, name='area_import'),
     
     # Personal
     path('personal/', views.personal_list, name='personal_list'),
@@ -29,6 +33,7 @@ urlpatterns = [
     path('personal/<int:pk>/', views.personal_detail, name='personal_detail'),
     path('personal/<int:pk>/editar/', views.personal_update, name='personal_update'),
     path('personal/exportar/', views.personal_export, name='personal_export'),
+    path('personal/importar/', views.personal_import, name='personal_import'),
     
     # Roster
     path('roster/', views.roster_list, name='roster_list'),
