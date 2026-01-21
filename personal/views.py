@@ -347,6 +347,17 @@ def roster_matricial(request):
     # Filtros adicionales
     area_id = request.GET.get('area', '')
     buscar = request.GET.get('buscar', '')
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', '10')
+    
+    # Validar per_page
+    if per_page == 'todos':
+        per_page_num = None
+    else:
+        try:
+            per_page_num = int(per_page)
+        except ValueError:
+            per_page_num = 10
     
     # Calcular primer y último día del mes
     primer_dia = datetime(anio, mes, 1).date()
@@ -449,6 +460,18 @@ def roster_matricial(request):
     # Obtener todas las áreas para el filtro
     areas = Area.objects.filter(activa=True).select_related('gerencia').order_by('gerencia__nombre', 'nombre')
     
+    # Aplicar paginación
+    if per_page_num is not None:
+        paginator = Paginator(tabla_datos, per_page_num)
+        try:
+            tabla_datos_paginada = paginator.get_page(page)
+        except:
+            tabla_datos_paginada = paginator.get_page(1)
+    else:
+        # Mostrar todos sin paginación
+        tabla_datos_paginada = tabla_datos
+        paginator = None
+    
     # Lista de meses para el selector
     meses = [
         (1, 'Enero'), (2, 'Febrero'), (3, 'Marzo'), (4, 'Abril'),
@@ -460,7 +483,7 @@ def roster_matricial(request):
     anios = list(range(hoy.year - 3, hoy.year + 3))
     
     context = {
-        'tabla_datos': tabla_datos,
+        'tabla_datos': tabla_datos_paginada,
         'fechas_mes': fechas_mes,
         'mes': mes,
         'anio': anio,
@@ -470,6 +493,9 @@ def roster_matricial(request):
         'areas': areas,
         'area_id': area_id,
         'buscar': buscar,
+        'page_obj': tabla_datos_paginada if paginator else None,
+        'paginator': paginator,
+        'per_page': per_page,
     }
     
     return render(request, 'personal/roster_matricial.html', context)

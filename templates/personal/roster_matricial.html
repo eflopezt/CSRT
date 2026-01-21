@@ -186,6 +186,33 @@
             </form>
         </div>
     </div>
+    
+    <!-- Control de resultados por página -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <label class="form-label mb-0">
+                        <i class="fas fa-list"></i> Resultados por página:
+                    </label>
+                </div>
+                <div class="col-md-6">
+                    <div class="btn-group w-100" role="group">
+                        <a href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page=10" 
+                           class="btn btn-sm {% if per_page == '10' %}btn-primary{% else %}btn-outline-primary{% endif %}">10</a>
+                        <a href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page=20" 
+                           class="btn btn-sm {% if per_page == '20' %}btn-primary{% else %}btn-outline-primary{% endif %}">20</a>
+                        <a href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page=50" 
+                           class="btn btn-sm {% if per_page == '50' %}btn-primary{% else %}btn-outline-primary{% endif %}">50</a>
+                        <a href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page=100" 
+                           class="btn btn-sm {% if per_page == '100' %}btn-primary{% else %}btn-outline-primary{% endif %}">100</a>
+                        <a href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page=todos" 
+                           class="btn btn-sm {% if per_page == 'todos' %}btn-primary{% else %}btn-outline-primary{% endif %}">Todos</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card shadow-sm">
@@ -196,7 +223,6 @@
             <div class="row">
                 <div class="col-md-6">
                     • <strong>T</strong>: Trabajo Presencial<br>
-                    • <strong>TR</strong>: Trabajo Remoto<br>
                     • <strong>DL</strong>: Día Libre<br>
                     • <strong>DLA</strong>: Día Libre Acumulado (descuenta de días al 31/12/25, máx. 7 consecutivos)<br>
                     • <strong>DOL</strong>: Compensación por Horario Extendido<br>
@@ -280,6 +306,76 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Paginación -->
+        {% if paginator %}
+        <div class="card-footer">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0 text-muted">
+                        Mostrando 
+                        {% if page_obj.has_other_pages %}
+                            {{ page_obj.start_index }} - {{ page_obj.end_index }}
+                        {% else %}
+                            {% if page_obj|length > 0 %}{{ page_obj|length }}{% else %}0{% endif %}
+                        {% endif %}
+                        de {{ paginator.count }} trabajadores
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <nav aria-label="Paginación">
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page={{ per_page }}&page=1">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-double-left"></i></span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-left"></i></span>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Página {{ page_obj.number }} de {{ paginator.num_pages }}
+                                </span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}">
+                                        <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?mes={{ mes }}&anio={{ anio }}&area={{ area_id }}&buscar={{ buscar }}&per_page={{ per_page }}&page={{ paginator.num_pages }}">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-right"></i></span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-double-right"></i></span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
