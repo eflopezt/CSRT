@@ -49,6 +49,10 @@ CACHES = {
 # Use database-backed sessions instead of Redis
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
+# Disable Celery in production (requires Redis)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
 # Email backend for production
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
