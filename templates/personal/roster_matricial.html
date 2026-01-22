@@ -427,17 +427,16 @@
                 <div class="col-md-6">
                     • <strong>T</strong>: Trabajo Presencial<br>
                     • <strong>DL</strong>: Día Libre<br>
-                    • <strong>DLA</strong>: Día Libre Acumulado (descuenta de días al 31/12/25, máx. 7 consecutivos)<br>
-                    • <strong>DOL</strong>: Compensación por Horario Extendido<br>
-                    • <strong>DM</strong>: Descanso Médico
+                    • <strong>TR</strong>: Trabajo Remoto<br>
+                    • <strong>DM</strong>: Descanso Médico<br>
+                    • <strong>V</strong>: Vacaciones Aprobadas y/o Gozadas
                 </div>
                 <div class="col-md-6">
-                    • <strong>V</strong>: Vacaciones Aprobadas y/o Gozadas<br>
                     • <strong>F</strong>: Feriado No Recuperable<br>
                     • <strong>FC</strong>: Feriado Compensable<br>
                     • <strong>Editable:</strong> Selecciona el código de la lista desplegable. Se guarda automáticamente.<br>
-                    • <strong>Cálculo:</strong> Días Libres Pendientes = (Días al 31/12/25 + Ganados) - DL/DLA usados<br>
-                    • <strong>Importante:</strong> DLA solo puede usarse si hay saldo disponible al 31/12/25
+                    • <strong>Cálculo:</strong> Días Libres Pendientes = (Días al 31/12/25 + Ganados) - DL usados<br>
+                    • <strong>Nota:</strong> Los cambios deben ser enviados para aprobación
                 </div>
             </div>
         </div>
@@ -489,8 +488,10 @@
                                     <option value="T" {% if item.codigo == 'T' %}selected{% endif %}>T</option>
                                     <option value="TR" {% if item.codigo == 'TR' %}selected{% endif %}>TR</option>
                                     <option value="DL" {% if item.codigo == 'DL' %}selected{% endif %}>DL</option>
+                                    {% if user.is_superuser %}
                                     <option value="DLA" {% if item.codigo == 'DLA' %}selected{% endif %}>DLA</option>
                                     <option value="DOL" {% if item.codigo == 'DOL' %}selected{% endif %}>DOL</option>
+                                    {% endif %}
                                     <option value="DM" {% if item.codigo == 'DM' %}selected{% endif %}>DM</option>
                                     <option value="V" {% if item.codigo == 'V' %}selected{% endif %}>V</option>
                                     <option value="F" {% if item.codigo == 'F' %}selected{% endif %}>F</option>
@@ -586,7 +587,17 @@
     <a href="{% url 'home' %}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Volver al Inicio
     </a>
+    {% if not user.is_superuser and not es_responsable %}
+    <button type="button" class="btn btn-warning ms-2" onclick="confirmarEnvioAprobacion()">
+        <i class="fas fa-paper-plane me-1"></i> 
+        Enviar Cambios para Aprobación
+    </button>
+    {% endif %}
 </div>
+
+<form id="formEnviarAprobacion" method="post" action="{% url 'enviar_cambios_aprobacion' %}" style="display:none;">
+    {% csrf_token %}
+</form>
 
 <script>
 // Diccionario de estados del roster
@@ -763,5 +774,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Función para confirmar envío de cambios
+function confirmarEnvioAprobacion() {
+    const borradores = {{ borradores_count|default:0 }};
+    
+    if (borradores === 0) {
+        alert('No hay cambios pendientes de enviar para aprobación.');
+        return;
+    }
+    
+    const mensaje = borradores === 1 
+        ? '¿Confirma que desea enviar 1 cambio para aprobación?' 
+        : `¿Confirma que desea enviar ${borradores} cambios para aprobación?`;
+    
+    if (confirm(mensaje)) {
+        document.getElementById('formEnviarAprobacion').submit();
+    }
+}
 </script>
 {% endblock %}
