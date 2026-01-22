@@ -53,6 +53,16 @@ def filtrar_personal(user):
     if user.is_superuser:
         return Personal.objects.all()
     
+    # Si el usuario tiene un Personal vinculado, puede ver su propio registro
+    if hasattr(user, 'personal_data') and user.personal_data:
+        # Si también es responsable, ve su gerencia completa
+        gerencia = get_gerencia_responsable(user)
+        if gerencia:
+            return Personal.objects.filter(area__gerencia=gerencia)
+        # Si solo es personal regular, solo ve su propio registro
+        return Personal.objects.filter(id=user.personal_data.id)
+    
+    # Si es responsable sin Personal vinculado (caso legacy)
     gerencia = get_gerencia_responsable(user)
     if gerencia:
         return Personal.objects.filter(area__gerencia=gerencia)
@@ -65,6 +75,11 @@ def puede_editar_personal(user, personal):
     if user.is_superuser:
         return True
     
+    # Un usuario puede editar su propio registro de Personal
+    if hasattr(user, 'personal_data') and user.personal_data and user.personal_data == personal:
+        return True
+    
+    # Un responsable puede editar el personal de su gerencia
     gerencia = get_gerencia_responsable(user)
     if gerencia and personal.area and personal.area.gerencia == gerencia:
         return True
