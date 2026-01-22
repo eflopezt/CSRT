@@ -291,7 +291,7 @@
 {% if borradores_count > 0 %}
 <div id="borradores-alert" class="alert alert-warning alert-dismissible fade show" role="alert">
     <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Cambios sin Enviar</h5>
-    <p class="mb-2">Tienes <strong>{{ borradores_count }} cambios en borrador</strong> que no han sido enviados para aprobación.</p>
+    <p class="mb-2">Tienes <strong><span id="contador-borradores">{{ borradores_count }}</span> cambios en borrador</strong> que no han sido enviados para aprobación.</p>
     <hr>
     <form method="post" action="{% url 'enviar_cambios_aprobacion' %}" class="d-inline">
         {% csrf_token %}
@@ -602,6 +602,7 @@
 <script>
 // Diccionario de estados del roster
 const rosterEstados = {{ roster_estados|safe }};
+let borradoresCount = {{ borradores_count|default:0 }};  // Contador dinámico de borradores
 
 document.addEventListener('DOMContentLoaded', function() {
     const selects = document.querySelectorAll('.codigo-input');
@@ -700,6 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Actualizar estado del roster
                 if (data.roster_id && data.estado) {
                     td.dataset.rosterId = data.roster_id;
+                    const estadoAnterior = rosterEstados[data.roster_id];
                     // Remover clases de estado anteriores
                     td.classList.remove('estado-borrador', 'estado-pendiente', 'estado-aprobado');
                     // Agregar nueva clase de estado
@@ -708,6 +710,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     rosterEstados[data.roster_id] = data.estado;
                     // Actualizar título
                     td.title = 'Estado: ' + data.estado.charAt(0).toUpperCase() + data.estado.slice(1);
+                    
+                    // Actualizar contador de borradores
+                    if (data.estado === 'borrador' && estadoAnterior !== 'borrador') {
+                        borradoresCount++;
+                        actualizarContadorBorradores();
+                    } else if (estadoAnterior === 'borrador' && data.estado !== 'borrador') {
+                        borradoresCount = Math.max(0, borradoresCount - 1);
+                        actualizarContadorBorradores();
+                    }
+                } else if (!data.roster_id) {
+                    // Si se eliminó el roster, verificar si era borrador
+                    const rosterId = td.dataset.rosterId;
+                    if (rosterId && rosterEstados[rosterId] === 'borrador') {
+                        borradoresCount = Math.max(0, borradoresCount - 1);
+                        actualizarContadorBorradores();
+                        delete rosterEstados[rosterId];
+                    }
                 }
                 
                 // Actualizar días libres ganados si viene en la respuesta
@@ -775,18 +794,53 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Función para actualizar el contador de borradores en la UI
+function actualizarContadorBorradores() {
+    // Actualizar alerta flotante
+    const alertElement = document.getElementById('borradores-alert');
+    if (borradoresCount > 0) {
+        if (!alertElement) {
+            // Crear alerta si no existe
+            const newAlert = document.createElement('div');
+            newAlert.id = 'borradores-alert';
+            newAlert.className = 'alert alert-warning alert-dismissible fade show';
+            newAlert.setAttribute('role', 'alert');
+            newAlert.innerHTML = `
+                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Cambios sin Enviar</h5>
+                <p class="mb-2">Tienes <strong><span id="contador-borradores">${borradoresCount}</span> cambios en borrador</strong> que no han sido enviados para aprobación.</p>
+                <hr>
+                <form method="post" action="{% url 'enviar_cambios_aprobacion' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-paper-plane"></i> Enviar para Aprobación
+                    </button>
+                </form>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            `;
+            document.querySelector('[class*="mes-indicator"]').insertAdjacentElement('beforebegin', newAlert);
+        } else {
+            // Actualizar contador existente
+            const contadorSpan = alertElement.querySelector('#contador-borradores');
+            if (contadorSpan) {
+                contadorSpan.textContent = borradoresCount;
+            }
+        }
+    } else if (alertElement) {
+        // Ocultar alerta si no hay borradores
+        alertElement.remove();
+    }
+}
+
 // Función para confirmar envío de cambios
 function confirmarEnvioAprobacion() {
-    const borradores = {{ borradores_count|default:0 }};
-    
-    if (borradores === 0) {
+    if (borradoresCount === 0) {
         alert('No hay cambios pendientes de enviar para aprobación.');
         return;
     }
     
-    const mensaje = borradores === 1 
+    const mensaje = borradoresCount === 1 
         ? '¿Confirma que desea enviar 1 cambio para aprobación?' 
-        : `¿Confirma que desea enviar ${borradores} cambios para aprobación?`;
+        : `¿Confirma que desea enviar ${borradoresCount} cambios para aprobación?`;
     
     if (confirm(mensaje)) {
         document.getElementById('formEnviarAprobacion').submit();
