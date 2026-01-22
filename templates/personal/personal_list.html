@@ -31,11 +31,11 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select name="area" class="form-select">
-                        <option value="">Todas las áreas</option>
+                    <select name="subarea" class="form-select">
+                        <option value="">Todas las subsubáreas</option>
                         {% for a in areas %}
                             <option value="{{ a.id }}" {% if area_id == a.id|stringformat:"s" %}selected{% endif %}>
-                                {{ a.nombre }} ({{ a.gerencia.nombre }})
+                                {{ a.nombre }} ({{ a.área.nombre }})
                             </option>
                         {% endfor %}
                     </select>
@@ -58,7 +58,7 @@
                         <th>DNI</th>
                         <th>Apellidos y Nombres</th>
                         <th>Cargo</th>
-                        <th>Área</th>
+                        <th>SubÁrea</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -69,7 +69,7 @@
                         <td>{{ p.nro_doc }}</td>
                         <td><strong>{{ p.apellidos_nombres }}</strong></td>
                         <td>{{ p.cargo }}</td>
-                        <td>{{ p.area.nombre|default:"-" }}</td>
+                        <td>{{ p.subarea.nombre|default:"-" }}</td>
                         <td>
                             {% if p.estado == 'Activo' %}
                                 <span class="badge bg-success">{{ p.estado }}</span>

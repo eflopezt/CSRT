@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}{% if area %}Editar{% else %}Nueva{% endif %} Área{% endblock %}
+{% block title %}{% if área %}Editar{% else %}Nueva{% endif %} Área{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -9,8 +9,8 @@
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
                 <h4 class="mb-0">
-                    <i class="fas fa-sitemap"></i>
-                    {% if area %}Editar Área{% else %}Nueva Área{% endif %}
+                    <i class="fas fa-building"></i>
+                    {% if área %}Editar Área{% else %}Nueva Área{% endif %}
                 </h4>
             </div>
             <div class="card-body">

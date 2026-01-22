@@ -21,7 +21,7 @@ from personal.validators import PersonalValidator, RosterValidator, validar_arch
 from personal.decorators import handle_exceptions, handle_api_exceptions, log_access
 
 # Importar modelos
-from personal.models import Gerencia, Roster, Personal
+from personal.models import Area, Roster, Personal
 
 # Configurar loggers
 logger = logging.getLogger('personal.business')
@@ -34,7 +34,7 @@ security_logger = logging.getLogger('personal.security')
 
 @login_required
 @handle_exceptions(default_redirect='gerencia_list')
-@log_access('Creación de nueva gerencia')
+@log_access('Creación de nueva área')
 def crear_gerencia_mejorada(request):
     """
     Vista mejorada para crear gerencias con:
@@ -53,7 +53,7 @@ def crear_gerencia_mejorada(request):
             responsable = get_object_or_404(Personal, pk=responsable_id)
         
         # Usar el servicio (maneja transacciones y validaciones)
-        gerencia = GerenciaService.crear_gerencia(
+        area = AreaService.crear_gerencia(
             nombre=nombre,
             responsable=responsable,
             descripcion=descripcion,
@@ -61,7 +61,7 @@ def crear_gerencia_mejorada(request):
         )
         
         # El decorador maneja cualquier error automáticamente
-        messages.success(request, f'Gerencia "{gerencia.nombre}" creada exitosamente.')
+        messages.success(request, f'Área "{area.nombre}" creada exitosamente.')
         return redirect('gerencia_list')
     
     # Renderizar formulario
@@ -251,11 +251,11 @@ def operacion_compleja_ejemplo(request):
         with transaction.atomic():
             try:
                 # Crear gerencia
-                gerencia = GerenciaService.crear_gerencia(
-                    nombre="Nueva Gerencia",
+                area = AreaService.crear_gerencia(
+                    nombre="Nueva Área",
                     usuario=request.user
                 )
-                logger.info(f"Gerencia creada: {gerencia.nombre}")
+                logger.info(f"Área creada: {gerencia.nombre}")
                 
                 # Crear personal
                 personal_data = {
@@ -274,7 +274,7 @@ def operacion_compleja_ejemplo(request):
                 # Si algo falla, todo se revierte automáticamente
                 messages.success(
                     request,
-                    'Operación completa exitosa. Gerencia y personal creados.'
+                    'Operación completa exitosa. Área y personal creados.'
                 )
                 
             except ValidationError as e:

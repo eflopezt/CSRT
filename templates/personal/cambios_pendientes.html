@@ -32,7 +32,7 @@
                     <tr>
                         <th>Fecha</th>
                         <th>Personal</th>
-                        <th>Área</th>
+                        <th>SubÁrea</th>
                         <th>Código</th>
                         <th>Modificado por</th>
                         <th>Última actualización</th>
@@ -52,10 +52,10 @@
                             <small class="text-muted">{{ item.personal.nro_doc }}</small>
                         </td>
                         <td>
-                            {% if item.personal.area %}
-                                {{ item.personal.area.nombre }}
+                            {% if item.personal.subarea %}
+                                {{ item.personal.subarea.nombre }}
                             {% else %}
-                                <span class="text-muted">Sin área</span>
+                                <span class="text-muted">Sin subárea</span>
                             {% endif %}
                         </td>
                         <td>

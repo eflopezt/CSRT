@@ -251,17 +251,17 @@ class RosterValidator:
         return True
 
 
-class GerenciaValidator:
+class AreaValidator:
     """Validador para el modelo Gerencia."""
     
     @staticmethod
-    def validar_responsable_unico(responsable, gerencia_id=None):
+    def validar_responsable_unico(responsable, area_id=None):
         """
-        Valida que el responsable no esté asignado a otra gerencia.
+        Valida que el responsable no esté asignado a otra area.
         
         Args:
             responsable: Instancia de Personal
-            gerencia_id: ID de la gerencia actual (para actualizaciones)
+            area_id: ID de la gerencia actual (para actualizaciones)
         
         Raises:
             ValidationError: Si el responsable ya está asignado
@@ -271,10 +271,10 @@ class GerenciaValidator:
         
         from .models import Gerencia
         
-        query = Gerencia.objects.filter(responsable=responsable)
+        query = Area.objects.filter(responsable=responsable)
         
-        if gerencia_id:
-            query = query.exclude(pk=gerencia_id)
+        if area_id:
+            query = query.exclude(pk=area_id)
         
         if query.exists():
             gerencia_actual = query.first()

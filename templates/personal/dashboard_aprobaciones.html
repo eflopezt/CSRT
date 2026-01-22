@@ -41,8 +41,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">
         <i class="fas fa-tasks"></i> Dashboard de Aprobaciones
-        {% if gerencia %}
-            <span class="text-muted fs-6">- {{ gerencia.nombre }}</span>
+        {% if área %}
+            <span class="text-muted fs-6">- {{ área.nombre }}</span>
         {% endif %}
     </h1>
     <div>
@@ -145,8 +145,8 @@
                        placeholder="Buscar por DNI o nombre..." value="{{ buscar }}">
             </div>
             <div class="col-md-2">
-                <select name="area" class="form-select form-select-sm">
-                    <option value="">Todas las áreas</option>
+                <select name="subarea" class="form-select form-select-sm">
+                    <option value="">Todas las subsubáreas</option>
                     {% for a in areas %}
                     <option value="{{ a.id }}" {% if area_filtro == a.id|stringformat:"s" %}selected{% endif %}>
                         {{ a.nombre }}
@@ -192,7 +192,7 @@
                         <th>Fecha</th>
                         <th>Personal</th>
                         <th>DNI</th>
-                        <th>Área</th>
+                        <th>SubÁrea</th>
                         <th>Código</th>
                         <th>Modificado por</th>
                         <th>Actualizado</th>
@@ -221,8 +221,8 @@
                             <code>{{ item.personal.nro_doc }}</code>
                         </td>
                         <td>
-                            {% if item.personal.area %}
-                                <span class="badge bg-secondary">{{ item.personal.area.nombre }}</span>
+                            {% if item.personal.subarea %}
+                                <span class="badge bg-secondary">{{ item.personal.subarea.nombre }}</span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}

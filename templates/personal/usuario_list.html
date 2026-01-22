@@ -109,7 +109,7 @@
                     <tr>
                         <th>DNI</th>
                         <th>Nombre Completo</th>
-                        <th>Área</th>
+                        <th>SubÁrea</th>
                         <th>Cargo</th>
                         <th class="text-center">Acciones</th>
                     </tr>
@@ -121,9 +121,9 @@
                         <td>{{ persona.nombre_completo }}</td>
                         <td>
                             {% if persona.area %}
-                                {{ persona.area.nombre }}
+                                {{ persona.subarea.nombre }}
                             {% else %}
-                                <span class="text-muted">Sin área</span>
+                                <span class="text-muted">Sin subárea</span>
                             {% endif %}
                         </td>
                         <td>{{ persona.cargo }}</td>

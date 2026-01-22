@@ -114,7 +114,7 @@ def crear_plantilla_personal(personal_queryset=None):
     """
     Crea una plantilla Excel para importar/actualizar Personal con catálogos y validaciones.
     """
-    from .models import Gerencia, Area, Personal
+    from .models import Area, SubArea, Personal
     
     # Datos principales (personal actual si se proporciona)
     if personal_queryset:
@@ -127,7 +127,7 @@ def crear_plantilla_personal(personal_queryset=None):
                 'CodigoFotocheck': p.codigo_fotocheck,
                 'Cargo': p.cargo,
                 'TipoTrabajador': p.tipo_trab,
-                'Area': p.area.nombre if p.area else '',
+                'SubArea': p.subarea.nombre if p.area else '',
                 'Estado': p.estado,
                 'FechaAlta': p.fecha_alta.strftime('%Y-%m-%d') if p.fecha_alta else '',
                 'FechaCese': p.fecha_cese.strftime('%Y-%m-%d') if p.fecha_cese else '',
@@ -152,7 +152,7 @@ def crear_plantilla_personal(personal_queryset=None):
             'CodigoFotocheck': '',
             'Cargo': 'CARGO EJEMPLO',
             'TipoTrabajador': 'Empleado',
-            'Area': '',
+            'SubArea': '',
             'Estado': 'Activo',
             'FechaAlta': '2024-01-01',
             'FechaCese': '',
@@ -173,9 +173,9 @@ def crear_plantilla_personal(personal_queryset=None):
     
     # Catálogos
     catalogos = {
-        'CAT_Areas': pd.DataFrame({
-            'Area': [a.nombre for a in Area.objects.filter(activa=True).order_by('nombre')],
-            'Gerencia': [a.gerencia.nombre for a in Area.objects.filter(activa=True).order_by('nombre')]
+        'CAT_SubAreas': pd.DataFrame({
+            'SubArea': [a.nombre for a in SubArea.objects.filter(activa=True).order_by('nombre')],
+            'Area': [a.area.nombre for a in SubArea.objects.filter(activa=True).order_by('nombre')]
         }),
         'CAT_TipoDoc': pd.DataFrame({
             'TipoDoc': ['DNI', 'CE', 'Pasaporte']
@@ -193,7 +193,7 @@ def crear_plantilla_personal(personal_queryset=None):
     
     # Columnas con validación
     columnas_validacion = {
-        'Area': 'CAT_Areas',
+        'SubArea': 'CAT_SubAreas',
         'TipoDoc': 'CAT_TipoDoc',
         'TipoTrabajador': 'CAT_TipoTrabajador',
         'Estado': 'CAT_Estado',
@@ -207,7 +207,7 @@ def crear_plantilla_gerencias(gerencias_queryset=None):
     """
     Crea una plantilla Excel para importar/actualizar Gerencias.
     """
-    from .models import Gerencia, Personal
+    from .models import Area, Personal
     
     # Datos principales
     if gerencias_queryset:
@@ -222,14 +222,14 @@ def crear_plantilla_gerencias(gerencias_queryset=None):
             })
     else:
         data = [{
-            'Nombre': 'GERENCIA EJEMPLO',
+            'Nombre': 'AREA EJEMPLO',
             'Responsable_DNI': '',
             'Responsable_Nombre': '',
             'Descripcion': '',
             'Activa': 'Sí',
         }]
     
-    df_gerencias = pd.DataFrame(data)
+    df_areas = pd.DataFrame(data)
     
     # Catálogo de responsables
     catalogos = {
@@ -254,7 +254,7 @@ def crear_plantilla_areas(areas_queryset=None):
     """
     Crea una plantilla Excel para importar/actualizar Áreas.
     """
-    from .models import Area, Gerencia
+    from .models import SubArea, Area
     
     # Datos principales
     if areas_queryset:
@@ -262,14 +262,14 @@ def crear_plantilla_areas(areas_queryset=None):
         for a in areas_queryset:
             data.append({
                 'Nombre': a.nombre,
-                'Gerencia': a.gerencia.nombre,
+                'Area': a.area.nombre,
                 'Descripcion': a.descripcion,
                 'Activa': 'Sí' if a.activa else 'No',
             })
     else:
         data = [{
-            'Nombre': 'AREA EJEMPLO',
-            'Gerencia': '',
+            'Nombre': 'SUBAREA EJEMPLO',
+            'Area': '',
             'Descripcion': '',
             'Activa': 'Sí',
         }]
@@ -278,8 +278,8 @@ def crear_plantilla_areas(areas_queryset=None):
     
     # Catálogos
     catalogos = {
-        'CAT_Gerencias': pd.DataFrame({
-            'Gerencia': [g.nombre for g in Gerencia.objects.filter(activa=True).order_by('nombre')]
+        'CAT_Areas': pd.DataFrame({
+            'Area': [g.nombre for g in Area.objects.filter(activa=True).order_by('nombre')]
         }),
         'CAT_Activa': pd.DataFrame({
             'Activa': ['Sí', 'No']
@@ -287,7 +287,7 @@ def crear_plantilla_areas(areas_queryset=None):
     }
     
     columnas_validacion = {
-        'Gerencia': 'CAT_Gerencias',
+        'Area': 'CAT_Areas',
         'Activa': 'CAT_Activa',
     }
     
@@ -316,7 +316,7 @@ def crear_plantilla_roster(mes, anio, personal_queryset, rosters_queryset=None):
         fila = {
             'DNI': persona.nro_doc,
             'ApellidosNombres': persona.apellidos_nombres,
-            'Area': persona.area.nombre if persona.area else '',
+            'SubArea': persona.subarea.nombre if persona.area else '',
             'DiasLibresCorte2025': float(persona.dias_libres_corte_2025),
         }
         

@@ -8,20 +8,20 @@ from decimal import Decimal
 from .user_models import UserProfile
 
 
-class Gerencia(models.Model):
+class Area(models.Model):
     """
-    Gerencias o departamentos de alto nivel.
-    Cada gerencia tiene un único responsable.
+    Áreas o departamentos de alto nivel.
+    Cada área tiene un único responsable.
     """
-    nombre = models.CharField(max_length=150, unique=True, verbose_name="Nombre de Gerencia")
+    nombre = models.CharField(max_length=150, unique=True, verbose_name="Nombre de Área")
     responsable = models.OneToOneField(
         'Personal',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='gerencia_responsable',
+        related_name='area_responsable',
         verbose_name="Responsable",
-        help_text="Persona responsable de esta gerencia"
+        help_text="Persona responsable de esta área"
     )
     descripcion = models.TextField(blank=True, verbose_name="Descripción")
     activa = models.BooleanField(default=True, verbose_name="Activa")
@@ -30,8 +30,8 @@ class Gerencia(models.Model):
     actualizado_en = models.DateTimeField(auto_now=True)
     
     class Meta:
-        verbose_name = "Gerencia"
-        verbose_name_plural = "Gerencias"
+        verbose_name = "Área"
+        verbose_name_plural = "Áreas"
         ordering = ['nombre']
         indexes = [
             models.Index(fields=['nombre']),
@@ -43,23 +43,23 @@ class Gerencia(models.Model):
     
     def clean(self):
         """Validación del modelo usando validadores centralizados."""
-        from .validators import GerenciaValidator
+        from .validators import AreaValidator
         
-        # Validar que el responsable no esté asignado a otra gerencia
+        # Validar que el responsable no esté asignado a otra área
         if self.responsable:
-            GerenciaValidator.validar_responsable_unico(self.responsable, self.pk)
+            AreaValidator.validar_responsable_unico(self.responsable, self.pk)
 
 
-class Area(models.Model):
+class SubArea(models.Model):
     """
-    Áreas de trabajo bajo una gerencia.
+    SubÁreas de trabajo bajo un área.
     """
-    nombre = models.CharField(max_length=150, verbose_name="Nombre de Área")
-    gerencia = models.ForeignKey(
-        Gerencia,
+    nombre = models.CharField(max_length=150, verbose_name="Nombre de SubÁrea")
+    area = models.ForeignKey(
+        Area,
         on_delete=models.CASCADE,
-        related_name='areas',
-        verbose_name="Gerencia"
+        related_name='subareas',
+        verbose_name="Área"
     )
     descripcion = models.TextField(blank=True, verbose_name="Descripción")
     activa = models.BooleanField(default=True, verbose_name="Activa")
@@ -68,17 +68,17 @@ class Area(models.Model):
     actualizado_en = models.DateTimeField(auto_now=True)
     
     class Meta:
-        verbose_name = "Área"
-        verbose_name_plural = "Áreas"
-        ordering = ['gerencia', 'nombre']
-        unique_together = ['nombre', 'gerencia']
+        verbose_name = "SubÁrea"
+        verbose_name_plural = "SubÁreas"
+        ordering = ['area', 'nombre']
+        unique_together = ['nombre', 'area']
         indexes = [
-            models.Index(fields=['gerencia', 'activa']),
+            models.Index(fields=['area', 'activa']),
             models.Index(fields=['nombre']),
         ]
     
     def __str__(self):
-        return f"{self.gerencia.nombre} - {self.nombre}"
+        return f"{self.area.nombre} - {self.nombre}"
 
 
 class Personal(models.Model):
@@ -168,13 +168,13 @@ class Personal(models.Model):
         choices=TIPO_TRAB_CHOICES,
         verbose_name="Tipo de Trabajador"
     )
-    area = models.ForeignKey(
-        Area,
+    subarea = models.ForeignKey(
+        SubArea,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='personal_asignado',
-        verbose_name="Área Asignada"
+        verbose_name="SubÁrea Asignada"
     )
     fecha_alta = models.DateField(
         null=True,
@@ -380,6 +380,30 @@ class Personal(models.Model):
             return False, f"No hay suficientes días acumulados al 31/12/25. Saldo actual: {self.dias_libres_corte_2025}, DLA usados: {dias_dla_usados-1}", saldo
         
         return True, "", saldo
+    
+    def validar_saldo_dl(self, nuevo_dl=False):
+        """
+        Valida que los días libres pendientes no sean negativos después de usar DL.
+        Retorna (es_valido, mensaje, dias_pendientes)
+        """
+        dias_ganados = self.calcular_dias_libres_ganados()
+        dias_dl_usados = self.calcular_dias_dl_usados()
+        dias_dla_usados = self.calcular_dias_dla_usados()
+        
+        # Si estamos intentando agregar un nuevo DL, incrementar el contador
+        if nuevo_dl:
+            dias_dl_usados += 1
+        
+        # DLA descuenta del corte 2025
+        saldo_corte_2025 = float(self.dias_libres_corte_2025) - dias_dla_usados
+        
+        # Días pendientes = saldo del corte + ganados - DL usados
+        dias_pendientes = saldo_corte_2025 + dias_ganados - dias_dl_usados
+        
+        if dias_pendientes < 0:
+            return False, f"No tiene más días libres pendientes disponibles. Días libres pendientes actuales: {dias_pendientes + 1:.0f}", dias_pendientes
+        
+        return True, "", dias_pendientes
 
     @property
     def dias_libres_ganados(self):
@@ -416,7 +440,7 @@ class Personal(models.Model):
         indexes = [
             models.Index(fields=['nro_doc']),
             models.Index(fields=['estado']),
-            models.Index(fields=['area']),
+            models.Index(fields=['subarea']),
         ]
     
     def __str__(self):

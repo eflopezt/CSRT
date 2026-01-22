@@ -4,12 +4,12 @@ Formularios para el módulo personal.
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column, Div
-from .models import Gerencia, Area, Personal, Roster
+from .models import Area, SubArea, Personal, Roster
 
 
-class GerenciaForm(forms.ModelForm):
+class AreaForm(forms.ModelForm):
     class Meta:
-        model = Gerencia
+        model = Area
         fields = ['nombre', 'responsable', 'descripcion', 'activa']
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3}),
@@ -22,10 +22,10 @@ class GerenciaForm(forms.ModelForm):
         self.helper.add_input(Submit('submit', 'Guardar', css_class='btn btn-primary'))
 
 
-class AreaForm(forms.ModelForm):
+class SubAreaForm(forms.ModelForm):
     class Meta:
-        model = Area
-        fields = ['nombre', 'gerencia', 'descripcion', 'activa']
+        model = SubArea
+        fields = ['nombre', 'area', 'descripcion', 'activa']
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3}),
         }
@@ -42,7 +42,7 @@ class PersonalForm(forms.ModelForm):
         model = Personal
         fields = [
             'tipo_doc', 'nro_doc', 'apellidos_nombres', 'codigo_fotocheck',
-            'cargo', 'tipo_trab', 'area', 'fecha_alta', 'fecha_cese', 'estado',
+            'cargo', 'tipo_trab', 'subarea', 'fecha_alta', 'fecha_cese', 'estado',
             'fecha_nacimiento', 'sexo', 'celular', 'correo_personal', 'correo_corporativo',
             'direccion', 'ubigeo', 'regimen_laboral', 'regimen_turno',
             'dias_libres_corte_2025', 'observaciones'
@@ -85,7 +85,7 @@ class PersonalForm(forms.ModelForm):
                     Column('tipo_trab', css_class='col-md-6'),
                 ),
                 Row(
-                    Column('area', css_class='col-md-6'),
+                    Column('subarea', css_class='col-md-6'),
                     Column('estado', css_class='col-md-6'),
                 ),
                 Row(

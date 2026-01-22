@@ -9,9 +9,9 @@ import pandas as pd
 from decimal import Decimal
 from datetime import datetime
 
-from .models import Gerencia, Area, Personal, Roster, RosterAudit
+from .models import Area, SubArea, Personal, Roster, RosterAudit
 from .validators import (
-    PersonalValidator, RosterValidator, GerenciaValidator,
+    PersonalValidator, RosterValidator, AreaValidator,
     validar_archivo_excel
 )
 
@@ -19,7 +19,7 @@ logger = logging.getLogger('personal.business')
 security_logger = logging.getLogger('personal.security')
 
 
-class GerenciaService:
+class AreaService:
     """Servicio para operaciones con Gerencias."""
     
     @staticmethod
@@ -36,7 +36,7 @@ class GerenciaService:
             usuario: Usuario que realiza la acción
         
         Returns:
-            Gerencia creada
+            Área creada
         
         Raises:
             ValidationError: Si los datos no son válidos
@@ -48,16 +48,16 @@ class GerenciaService:
             raise ValidationError('El nombre de la gerencia es obligatorio.')
         
         if responsable:
-            GerenciaValidator.validar_responsable_unico(responsable)
+            AreaValidator.validar_responsable_unico(responsable)
         
-        gerencia = Gerencia.objects.create(
+        area = Area.objects.create(
             nombre=nombre.strip(),
             responsable=responsable,
             descripcion=descripcion,
             activa=activa
         )
         
-        logger.info(f"Gerencia '{nombre}' creada exitosamente (ID: {gerencia.id})")
+        logger.info(f"Gerencia '{nombre}' creada exitosamente (ID: {area.id})")
         return gerencia
     
     @staticmethod
@@ -120,7 +120,7 @@ class GerenciaService:
                     activa = str(row['Activa']).strip().lower() in ['sí', 'si', 'yes', '1', 'true']
                 
                 # Crear o actualizar
-                gerencia, created = Gerencia.objects.update_or_create(
+                gerencia, created = Area.objects.update_or_create(
                     nombre=nombre,
                     defaults={
                         'responsable': responsable,
@@ -131,10 +131,10 @@ class GerenciaService:
                 
                 if created:
                     creados += 1
-                    logger.info(f"Gerencia creada: {nombre}")
+                    logger.info(f"Área creada: {nombre}")
                 else:
                     actualizados += 1
-                    logger.info(f"Gerencia actualizada: {nombre}")
+                    logger.info(f"Área actualizada: {nombre}")
             
             except ValidationError as e:
                 errores.append(f"Fila {idx + 2}: {str(e)}")
@@ -241,7 +241,7 @@ class RosterService:
             ValidationError: Si no se puede aprobar
         """
         try:
-            roster = Roster.objects.select_related('personal', 'personal__area__gerencia').get(pk=roster_id)
+            roster = Roster.objects.select_related('personal', 'personal__subarea__area').get(pk=roster_id)
         except Roster.DoesNotExist:
             logger.error(f"Roster {roster_id} no encontrado")
             raise ValidationError('Registro de roster no encontrado.')
@@ -298,7 +298,7 @@ class RosterService:
             ValidationError: Si no se puede rechazar
         """
         try:
-            roster = Roster.objects.select_related('personal', 'personal__area__gerencia').get(pk=roster_id)
+            roster = Roster.objects.select_related('personal', 'personal__subarea__area').get(pk=roster_id)
         except Roster.DoesNotExist:
             logger.error(f"Roster {roster_id} no encontrado")
             raise ValidationError('Registro de roster no encontrado.')

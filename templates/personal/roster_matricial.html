@@ -366,12 +366,12 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Área:</label>
-                    <select name="area" class="form-select">
-                        <option value="">Todas las áreas</option>
+                    <label class="form-label">SubÁrea:</label>
+                    <select name="subarea" class="form-select">
+                        <option value="">Todas las subsubáreas</option>
                         {% for a in areas %}
                             <option value="{{ a.id }}" {% if area_id == a.id|stringformat:"s" %}selected{% endif %}>
-                                {{ a.gerencia.nombre }} - {{ a.nombre }}
+                                {{ a.área.nombre }} - {{ a.nombre }}
                             </option>
                         {% endfor %}
                     </select>
@@ -461,7 +461,7 @@
                     <tr>
                         <td class="col-nombre">
                             <strong>{{ fila.personal.apellidos_nombres }}</strong><br>
-                            <small class="text-muted">{{ fila.personal.nro_doc }} - {{ fila.personal.area.nombre|default:"-" }}</small>
+                            <small class="text-muted">{{ fila.personal.nro_doc }} - {{ fila.personal.subarea.nombre|default:"-" }}</small>
                         </td>
                         <td class="col-dias-libres dias-libres-{{ fila.personal.id }}" title="Saldo después de descontar {{ fila.count_dla }} DLA">{{ fila.dias_libres_corte_2025 }}</td>
                         <td class="col-dias-trabajados dias-ganados-{{ fila.personal.id }}" title="T: {{ fila.count_t }}, TR: {{ fila.count_tr }}, DL usados: {{ fila.count_dl }}, DLA usados: {{ fila.count_dla }}">{{ fila.dias_libres_ganados }}</td>

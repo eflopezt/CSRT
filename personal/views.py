@@ -18,22 +18,22 @@ from calendar import monthrange
 from collections import defaultdict
 import json
 
-from .models import Gerencia, Area, Personal, Roster, RosterAudit
-from .forms import GerenciaForm, AreaForm, PersonalForm, RosterForm, ImportExcelForm
+from .models import Area, SubArea, Personal, Roster, RosterAudit
+from .forms import AreaForm, SubAreaForm, PersonalForm, RosterForm, ImportExcelForm
 from .permissions import (
-    filtrar_gerencias, filtrar_areas, filtrar_personal,
-    puede_editar_personal, get_context_usuario, es_responsable_gerencia
+    filtrar_areas, filtrar_subareas, filtrar_personal,
+    puede_editar_personal, get_context_usuario, es_responsable_area
 )
 
 
 @login_required
 def home(request):
     """Vista principal del sistema."""
-    from .permissions import get_gerencia_responsable
+    from .permissions import get_area_responsable
     
     # Aplicar filtros según usuario
-    gerencias_filtradas = filtrar_gerencias(request.user)
-    areas_filtradas = filtrar_areas(request.user)
+    gerencias_filtradas = filtrar_areas(request.user)
+    areas_filtradas = filtrar_subareas(request.user)
     personal_filtrado = filtrar_personal(request.user)
     
     # Contar cambios pendientes de aprobación para líderes
@@ -42,12 +42,12 @@ def home(request):
         # Admin ve todos los pendientes
         cambios_pendientes = Roster.objects.filter(estado='pendiente').count()
     else:
-        # Verificar si es responsable de gerencia
-        gerencia = get_gerencia_responsable(request.user)
-        if gerencia:
+        # Verificar si es responsable de área
+        area = get_area_responsable(request.user)
+        if area_resp:
             cambios_pendientes = Roster.objects.filter(
                 estado='pendiente',
-                personal__area__gerencia=gerencia
+                personal__subarea__area=area_resp
             ).count()
     
     context = {
@@ -74,17 +74,17 @@ def logout_view(request):
 # ================== GERENCIAS ==================
 
 @login_required
-def gerencia_list(request):
-    """Lista de gerencias."""
+def area_list(request):
+    """Lista de areas."""
     # Aplicar filtros según usuario
-    gerencias = filtrar_gerencias(request.user).annotate(
+    areas = filtrar_areas(request.user).annotate(
         total_areas=Count('areas'),
     ).order_by('nombre')
     
     # Filtros
     buscar = request.GET.get('buscar', '')
     if buscar:
-        gerencias = gerencias.filter(
+        areas = areas.filter(
             Q(nombre__icontains=buscar) |
             Q(responsable__apellidos_nombres__icontains=buscar)
         )
@@ -98,72 +98,8 @@ def gerencia_list(request):
 
 
 @login_required
-def gerencia_create(request):
-    """Crear nueva gerencia."""
-    if request.method == 'POST':
-        form = GerenciaForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Gerencia creada exitosamente.')
-            return redirect('gerencia_list')
-    else:
-        form = GerenciaForm()
-    
-    return render(request, 'personal/gerencia_form.html', {'form': form})
-
-
-@login_required
-def gerencia_update(request, pk):
-    """Actualizar gerencia."""
-    gerencia = get_object_or_404(Gerencia, pk=pk)
-    
-    if request.method == 'POST':
-        form = GerenciaForm(request.POST, instance=gerencia)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Gerencia actualizada exitosamente.')
-            return redirect('gerencia_list')
-    else:
-        form = GerenciaForm(instance=gerencia)
-    
-    return render(request, 'personal/gerencia_form.html', {
-        'form': form,
-        'gerencia': gerencia
-    })
-
-
-# ================== ÁREAS ==================
-
-@login_required
-def area_list(request):
-    """Lista de áreas."""
-    # Aplicar filtros según usuario
-    areas = filtrar_areas(request.user).select_related('gerencia').annotate(
-        total_personal=Count('personal_asignado')
-    ).order_by('gerencia__nombre', 'nombre')
-    
-    # Filtros
-    gerencia_id = request.GET.get('gerencia', '')
-    buscar = request.GET.get('buscar', '')
-    
-    if gerencia_id:
-        areas = areas.filter(gerencia_id=gerencia_id)
-    if buscar:
-        areas = areas.filter(nombre__icontains=buscar)
-    
-    gerencias = Gerencia.objects.filter(activa=True)
-    
-    return render(request, 'personal/area_list.html', {
-        'areas': areas,
-        'gerencias': gerencias,
-        'buscar': buscar,
-        'gerencia_id': gerencia_id
-    })
-
-
-@login_required
 def area_create(request):
-    """Crear nueva área."""
+    """Crear nueva area."""
     if request.method == 'POST':
         form = AreaForm(request.POST)
         if form.is_valid():
@@ -173,12 +109,12 @@ def area_create(request):
     else:
         form = AreaForm()
     
-    return render(request, 'personal/area_form.html', {'form': form})
+    return render(request, 'personal/gerencia_form.html', {'form': form})
 
 
 @login_required
 def area_update(request, pk):
-    """Actualizar área."""
+    """Actualizar area."""
     area = get_object_or_404(Area, pk=pk)
     
     if request.method == 'POST':
@@ -190,9 +126,73 @@ def area_update(request, pk):
     else:
         form = AreaForm(instance=area)
     
+    return render(request, 'personal/gerencia_form.html', {
+        'form': form,
+        'area': area_resp
+    })
+
+
+# ================== ÁREAS ==================
+
+@login_required
+def subarea_list(request):
+    """Lista de áreas."""
+    # Aplicar filtros según usuario
+    subareas = filtrar_subareas(request.user).select_related('area').annotate(
+        total_personal=Count('personal_asignado')
+    ).order_by('gerencia__nombre', 'nombre')
+    
+    # Filtros
+    area_id = request.GET.get('area', '')
+    buscar = request.GET.get('buscar', '')
+    
+    if area_id:
+        subareas = subareas.filter(area_id=area_id)
+    if buscar:
+        subareas = subareas.filter(nombre__icontains=buscar)
+    
+    areas = Area.objects.filter(activa=True)
+    
+    return render(request, 'personal/area_list.html', {
+        'subareas': subareas,
+        'gerencias': gerencias,
+        'buscar': buscar,
+        'area_id': area_id
+    })
+
+
+@login_required
+def subarea_create(request):
+    """Crear nueva área."""
+    if request.method == 'POST':
+        form = SubAreaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'SubÁrea creada exitosamente.')
+            return redirect('subarea_list')
+    else:
+        form = SubAreaForm()
+    
+    return render(request, 'personal/area_form.html', {'form': form})
+
+
+@login_required
+def subarea_update(request, pk):
+    """Actualizar área."""
+    area = get_object_or_404(SubArea, pk=pk)
+    
+    if request.method == 'POST':
+        form = SubAreaForm(request.POST, instance=area)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'SubÁrea actualizada exitosamente.')
+            return redirect('subarea_list')
+    else:
+        form = SubAreaForm(instance=area)
+    
     return render(request, 'personal/area_form.html', {
         'form': form,
-        'area': area
+        'subarea': subarea
     })
 
 
@@ -202,11 +202,11 @@ def area_update(request, pk):
 def personal_list(request):
     """Lista de personal."""
     # Aplicar filtros según usuario
-    personal = filtrar_personal(request.user).select_related('area', 'area__gerencia').order_by('apellidos_nombres')
+    personal = filtrar_personal(request.user).select_related('subarea', 'subarea__area').order_by('apellidos_nombres')
     
     # Filtros
     estado = request.GET.get('estado', '')
-    area_id = request.GET.get('area', '')
+    subarea_id = request.GET.get('area', '')
     buscar = request.GET.get('buscar', '')
     
     if estado:
@@ -225,11 +225,11 @@ def personal_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    areas = Area.objects.filter(activa=True).select_related('gerencia')
+    areas = SubArea.objects.filter(activa=True).select_related('area')
     
     return render(request, 'personal/personal_list.html', {
         'page_obj': page_obj,
-        'areas': areas,
+        'subareas': subareas,
         'estado': estado,
         'area_id': area_id,
         'buscar': buscar
@@ -266,10 +266,10 @@ def personal_update(request, pk):
         form = PersonalForm(request.POST, instance=personal)
         if form.is_valid():
             # Si es responsable, validar que el área pertenezca a su gerencia
-            if es_responsable_gerencia(request.user) and not request.user.is_superuser:
-                nueva_area = form.cleaned_data.get('area')
-                if nueva_area and nueva_area not in filtrar_areas(request.user):
-                    messages.error(request, 'No puedes asignar personal a áreas fuera de tu gerencia.')
+            if es_responsable_area(request.user) and not request.user.is_superuser:
+                nueva_subarea = form.cleaned_data.get('area')
+                if nueva_area and nueva_area not in filtrar_subareas(request.user):
+                    messages.error(request, 'No puedes asignar personal a áreas fuera de tu area.')
                     return render(request, 'personal/personal_form.html', {
                         'form': form,
                         'personal': personal
@@ -281,8 +281,8 @@ def personal_update(request, pk):
     else:
         form = PersonalForm(instance=personal)
         # Si es responsable, limitar opciones de área
-        if es_responsable_gerencia(request.user) and not request.user.is_superuser:
-            form.fields['area'].queryset = filtrar_areas(request.user)
+        if es_responsable_area(request.user) and not request.user.is_superuser:
+            form.fields['subarea'].queryset = filtrar_subareas(request.user)
     
     context = {
         'form': form,
@@ -296,7 +296,7 @@ def personal_update(request, pk):
 def personal_detail(request, pk):
     """Detalle de personal."""
     personal = get_object_or_404(
-        filtrar_personal(request.user).select_related('area', 'area__gerencia'),
+        filtrar_personal(request.user).select_related('subarea', 'subarea__area'),
         pk=pk
     )
     
@@ -363,7 +363,7 @@ def roster_matricial(request):
     anio = int(request.GET.get('anio', hoy.year))
     
     # Filtros adicionales
-    area_id = request.GET.get('area', '')
+    subarea_id = request.GET.get('area', '')
     buscar = request.GET.get('buscar', '')
     page = request.GET.get('page', 1)
     per_page = request.GET.get('per_page', '10')
@@ -389,7 +389,7 @@ def roster_matricial(request):
         fecha_actual += timedelta(days=1)
     
     # Obtener personal activo con filtros según usuario
-    personal_qs = filtrar_personal(request.user).filter(estado='Activo').select_related('area', 'area__gerencia')
+    personal_qs = filtrar_personal(request.user).filter(estado='Activo').select_related('subarea', 'subarea__area')
     
     if area_id:
         personal_qs = personal_qs.filter(area_id=area_id)
@@ -491,7 +491,7 @@ def roster_matricial(request):
         tabla_datos.append(fila)
     
     # Obtener todas las áreas para el filtro
-    areas = Area.objects.filter(activa=True).select_related('gerencia').order_by('gerencia__nombre', 'nombre')
+    areas = SubArea.objects.filter(activa=True).select_related('area').order_by('gerencia__nombre', 'nombre')
     
     # Aplicar paginación
     if per_page_num is not None:
@@ -536,7 +536,7 @@ def roster_matricial(request):
         'mes_nombre': dict(meses)[mes],
         'meses': meses,
         'anios': anios,
-        'areas': areas,
+        'subareas': subareas,
         'area_id': area_id,
         'buscar': buscar,
         'page_obj': tabla_datos_paginada if paginator else None,
@@ -595,9 +595,9 @@ from .excel_utils import (
 # ===== GERENCIAS =====
 
 @login_required
-def gerencia_export(request):
+def area_export(request):
     """Exportar gerencias a Excel con plantilla y catálogos."""
-    gerencias = filtrar_gerencias(request.user)
+    areas = filtrar_areas(request.user)
     
     # Crear plantilla con datos actuales
     excel_file = crear_plantilla_gerencias(gerencias)
@@ -612,7 +612,7 @@ def gerencia_export(request):
 
 
 @login_required
-def gerencia_import(request):
+def area_import(request):
     """Importar gerencias desde Excel."""
     if request.method == 'POST':
         form = ImportExcelForm(request.POST, request.FILES)
@@ -626,7 +626,7 @@ def gerencia_import(request):
                 columnas_requeridas = ['Nombre']
                 if not all(col in df.columns for col in columnas_requeridas):
                     messages.error(request, 'El archivo debe contener al menos la columna: Nombre')
-                    return redirect('gerencia_import')
+                    return redirect('area_import')
                 
                 creados = 0
                 actualizados = 0
@@ -652,7 +652,7 @@ def gerencia_import(request):
                             activa = str(row['Activa']).strip().lower() in ['sí', 'si', 'yes', '1', 'true']
                         
                         # Crear o actualizar
-                        gerencia, created = Gerencia.objects.update_or_create(
+                        area, created = Area.objects.update_or_create(
                             nombre=nombre,
                             defaults={
                                 'responsable': responsable,
@@ -677,11 +677,11 @@ def gerencia_import(request):
                     for error in errores[:10]:
                         messages.warning(request, error)
                 
-                return redirect('gerencia_list')
+                return redirect('area_list')
             
             except Exception as e:
                 messages.error(request, f'Error al procesar el archivo: {str(e)}')
-                return redirect('gerencia_import')
+                return redirect('area_import')
     else:
         form = ImportExcelForm()
     
@@ -706,9 +706,9 @@ def gerencia_import(request):
 # ===== ÁREAS =====
 
 @login_required
-def area_export(request):
+def subarea_export(request):
     """Exportar áreas a Excel con plantilla y catálogos."""
-    areas = filtrar_areas(request.user)
+    subareas = filtrar_subareas(request.user)
     
     excel_file = crear_plantilla_areas(areas)
     
@@ -722,7 +722,7 @@ def area_export(request):
 
 
 @login_required
-def area_import(request):
+def subarea_import(request):
     """Importar áreas desde Excel."""
     if request.method == 'POST':
         form = ImportExcelForm(request.POST, request.FILES)
@@ -734,8 +734,8 @@ def area_import(request):
                 
                 columnas_requeridas = ['Nombre', 'Gerencia']
                 if not all(col in df.columns for col in columnas_requeridas):
-                    messages.error(request, 'El archivo debe contener: Nombre, Gerencia')
-                    return redirect('area_import')
+                    messages.error(request, 'El archivo debe contener: Nombre, Area')
+                    return redirect('subarea_import')
                 
                 creados = 0
                 actualizados = 0
@@ -744,25 +744,25 @@ def area_import(request):
                 for idx, row in df.iterrows():
                     try:
                         nombre = str(row['Nombre']).strip()
-                        gerencia_nombre = str(row['Gerencia']).strip()
+                        area_nombre = str(row['Area']).strip()
                         
-                        if not nombre or nombre == 'nan' or not gerencia_nombre or gerencia_nombre == 'nan':
+                        if not nombre or nombre == 'nan' or not area_nombre or area_nombre == 'nan':
                             continue
                         
-                        # Buscar gerencia
+                        # Buscar área
                         try:
-                            gerencia = Gerencia.objects.get(nombre=gerencia_nombre)
-                        except Gerencia.DoesNotExist:
-                            errores.append(f"Fila {idx + 2}: Gerencia '{gerencia_nombre}' no encontrada")
+                            area = Area.objects.get(nombre=area_nombre)
+                        except Area.DoesNotExist:
+                            errores.append(f"Fila {idx + 2}: Área '{area_nombre}' no encontrada")
                             continue
                         
                         activa = True
                         if 'Activa' in row and pd.notna(row['Activa']):
                             activa = str(row['Activa']).strip().lower() in ['sí', 'si', 'yes', '1', 'true']
                         
-                        area, created = Area.objects.update_or_create(
+                        area, created = SubArea.objects.update_or_create(
                             nombre=nombre,
-                            gerencia=gerencia,
+                            area=area,
                             defaults={
                                 'descripcion': row.get('Descripcion', '') if pd.notna(row.get('Descripcion')) else '',
                                 'activa': activa,
@@ -785,11 +785,11 @@ def area_import(request):
                     for error in errores[:10]:
                         messages.warning(request, error)
                 
-                return redirect('area_list')
+                return redirect('subarea_list')
             
             except Exception as e:
                 messages.error(request, f'Error al procesar el archivo: {str(e)}')
-                return redirect('area_import')
+                return redirect('subarea_import')
     else:
         form = ImportExcelForm()
     
@@ -816,7 +816,7 @@ def area_import(request):
 @login_required
 def personal_export(request):
     """Exportar personal a Excel con plantilla y catálogos."""
-    personal = filtrar_personal(request.user).select_related('area', 'area__gerencia')
+    personal = filtrar_personal(request.user).select_related('subarea', 'subarea__area')
     
     excel_file = crear_plantilla_personal(personal)
     
@@ -858,11 +858,11 @@ def personal_import(request):
                             continue
                         
                         # Buscar área
-                        area = None
-                        if 'Area' in row and pd.notna(row['Area']):
+                        subarea = None
+                        if 'SubArea' in row and pd.notna(row['SubArea']):
                             try:
-                                area = Area.objects.get(nombre=str(row['Area']).strip())
-                            except Area.DoesNotExist:
+                                area = SubArea.objects.get(nombre=str(row['SubArea']).strip())
+                            except SubArea.DoesNotExist:
                                 pass
                         
                         # Preparar datos
@@ -872,7 +872,7 @@ def personal_import(request):
                             'codigo_fotocheck': row.get('CodigoFotocheck', '') if pd.notna(row.get('CodigoFotocheck')) else '',
                             'cargo': row.get('Cargo', '') if pd.notna(row.get('Cargo')) else '',
                             'tipo_trab': row.get('TipoTrabajador', 'Empleado') if pd.notna(row.get('TipoTrabajador')) else 'Empleado',
-                            'area': area,
+                            'subarea': subarea,
                             'estado': row.get('Estado', 'Activo') if pd.notna(row.get('Estado')) else 'Activo',
                             'sexo': row.get('Sexo', '') if pd.notna(row.get('Sexo')) else '',
                             'celular': row.get('Celular', '') if pd.notna(row.get('Celular')) else '',
@@ -1029,6 +1029,28 @@ def roster_import(request):
                             if codigo and codigo != 'NAN':
                                 fecha = datetime(anio, mes, dia).date()
                                 
+                                # Validaciones especiales para DLA
+                                if codigo == 'DLA':
+                                    # 1. Validar saldo disponible al 31/12/25
+                                    es_valido_saldo, mensaje_saldo, saldo = personal.validar_saldo_dla(nueva_dla=True)
+                                    if not es_valido_saldo:
+                                        errores.append(f"Fila {idx + 2}, Día {dia}: No se puede usar DLA. {mensaje_saldo}")
+                                        continue
+                                    
+                                    # 2. Validar máximo 7 días consecutivos
+                                    es_valido_consecutivos, mensaje_consecutivos = personal.validar_dla_consecutivos(fecha)
+                                    if not es_valido_consecutivos:
+                                        errores.append(f"Fila {idx + 2}, Día {dia}: {mensaje_consecutivos}")
+                                        continue
+                                
+                                # Validaciones especiales para DL
+                                if codigo == 'DL':
+                                    # Validar que haya días libres pendientes disponibles
+                                    es_valido_dl, mensaje_dl, dias_pendientes = personal.validar_saldo_dl(nuevo_dl=True)
+                                    if not es_valido_dl:
+                                        errores.append(f"Fila {idx + 2}, Día {dia}: {mensaje_dl}")
+                                        continue
+                                
                                 roster, created = Roster.objects.update_or_create(
                                     personal=personal,
                                     fecha=fecha,
@@ -1144,8 +1166,20 @@ def roster_update_cell(request):
                     'old_value': codigo_anterior
                 }, status=400)
         
+        # Validaciones especiales para DL
+        if codigo == 'DL':
+            # Validar que haya días libres pendientes disponibles
+            es_valido_dl, mensaje_dl, dias_pendientes = personal.validar_saldo_dl(nuevo_dl=True)
+            if not es_valido_dl:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'No se puede usar DL. {mensaje_dl}',
+                    'revert': True,
+                    'old_value': codigo_anterior
+                }, status=400)
+        
         # Determinar el estado según el usuario
-        from .permissions import get_gerencia_responsable
+        from .permissions import get_area_responsable
         
         estado_inicial = 'aprobado'  # Por defecto aprobado para admin
         
@@ -1154,7 +1188,7 @@ def roster_update_cell(request):
             if hasattr(request.user, 'personal_data') and request.user.personal_data == personal:
                 estado_inicial = 'borrador'
             # Para líderes/responsables, el cambio va aprobado directamente
-            elif get_gerencia_responsable(request.user):
+            elif get_area_responsable(request.user):
                 estado_inicial = 'aprobado'
         
         if codigo:
@@ -1216,28 +1250,28 @@ def roster_update_cell(request):
 @login_required
 def dashboard_aprobaciones(request):
     """Dashboard completo de aprobaciones para responsables."""
-    from .permissions import get_gerencia_responsable
+    from .permissions import get_area_responsable
     from django.db.models import Q, Count
     
     # Verificar permisos
-    gerencia = None
+    area = None
     if request.user.is_superuser:
         pendientes_qs = Roster.objects.filter(estado='pendiente')
         borradores_qs = Roster.objects.filter(estado='borrador')
         aprobados_qs = Roster.objects.filter(estado='aprobado')
     else:
-        gerencia = get_gerencia_responsable(request.user)
-        if not gerencia:
+        area = get_area_responsable(request.user)
+        if not area_resp:
             messages.error(request, 'No tiene permisos para ver el dashboard de aprobaciones.')
             return redirect('home')
         
-        pendientes_qs = Roster.objects.filter(estado='pendiente', personal__area__gerencia=gerencia)
-        borradores_qs = Roster.objects.filter(estado='borrador', personal__area__gerencia=gerencia)
-        aprobados_qs = Roster.objects.filter(estado='aprobado', personal__area__gerencia=gerencia)
+        pendientes_qs = Roster.objects.filter(estado='pendiente', personal__subarea__area=area_resp)
+        borradores_qs = Roster.objects.filter(estado='borrador', personal__subarea__area=area_resp)
+        aprobados_qs = Roster.objects.filter(estado='aprobado', personal__subarea__area=area_resp)
     
     # Filtros
     buscar = request.GET.get('buscar', '')
-    area_filtro = request.GET.get('area', '')
+    subarea_filtro = request.GET.get('area', '')
     codigo_filtro = request.GET.get('codigo', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
@@ -1278,17 +1312,17 @@ def dashboard_aprobaciones(request):
     
     # Obtener áreas para filtro
     if request.user.is_superuser:
-        areas = Area.objects.filter(activa=True).order_by('nombre')
-    elif gerencia:
-        areas = Area.objects.filter(gerencia=gerencia, activa=True).order_by('nombre')
+        areas = SubArea.objects.filter(activa=True).order_by('nombre')
+    elif area_resp:
+        areas = SubArea.objects.filter(area=area, activa=True).order_by('nombre')
     else:
-        areas = Area.objects.none()
+        areas = SubArea.objects.none()
     
     context = {
         'pendientes': pendientes,
         'stats': stats,
-        'gerencia': gerencia,
-        'areas': areas,
+        'area': area_resp,
+        'subareas': subareas,
         'buscar': buscar,
         'area_filtro': area_filtro,
         'codigo_filtro': codigo_filtro,

@@ -47,7 +47,7 @@
                         <th>Fecha</th>
                         <th>DNI</th>
                         <th>Personal</th>
-                        <th>Área</th>
+                        <th>SubÁrea</th>
                         <th>Código</th>
                         <th>Acciones</th>
                     </tr>
@@ -58,7 +58,7 @@
                         <td>{{ r.fecha }}</td>
                         <td>{{ r.personal.nro_doc }}</td>
                         <td><strong>{{ r.personal.apellidos_nombres }}</strong></td>
-                        <td>{{ r.personal.area.nombre|default:"-" }}</td>
+                        <td>{{ r.personal.subarea.nombre|default:"-" }}</td>
                         <td><span class="badge bg-info">{{ r.codigo|default:"-" }}</span></td>
                         <td>
                             <a href="{% url 'roster_update' r.pk %}" class="btn btn-sm btn-warning">

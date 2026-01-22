@@ -7,18 +7,18 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Gerencia, Area, Personal, Roster, RosterAudit
+from .models import Area, SubArea, Personal, Roster, RosterAudit
 from .serializers import (
-    GerenciaSerializer, AreaSerializer,
+    AreaSerializer, SubAreaSerializer,
     PersonalListSerializer, PersonalDetailSerializer, PersonalCreateUpdateSerializer,
     RosterSerializer, RosterBulkCreateSerializer, RosterAuditSerializer
 )
 
 
-class GerenciaViewSet(viewsets.ModelViewSet):
+class AreaViewSet(viewsets.ModelViewSet):
     """ViewSet para Gerencias."""
-    queryset = Gerencia.objects.all()
-    serializer_class = GerenciaSerializer
+    queryset = Area.objects.all()
+    serializer_class = AreaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activa']
@@ -27,13 +27,13 @@ class GerenciaViewSet(viewsets.ModelViewSet):
     ordering = ['nombre']
 
 
-class AreaViewSet(viewsets.ModelViewSet):
-    """ViewSet para Áreas."""
-    queryset = Area.objects.select_related('gerencia').all()
-    serializer_class = AreaSerializer
+class SubAreaViewSet(viewsets.ModelViewSet):
+    """ViewSet para SubÁreas."""
+    queryset = SubArea.objects.select_related('area').all()
+    serializer_class = SubAreaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['gerencia', 'activa']
+    filterset_fields = ['area', 'activa']
     search_fields = ['nombre', 'gerencia__nombre']
     ordering_fields = ['nombre', 'gerencia__nombre', 'creado_en']
     ordering = ['gerencia__nombre', 'nombre']
@@ -41,10 +41,10 @@ class AreaViewSet(viewsets.ModelViewSet):
 
 class PersonalViewSet(viewsets.ModelViewSet):
     """ViewSet para Personal."""
-    queryset = Personal.objects.select_related('area', 'area__gerencia', 'usuario').all()
+    queryset = Personal.objects.select_related('subarea', 'subarea__area', 'usuario').all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['estado', 'tipo_trab', 'area', 'area__gerencia']
+    filterset_fields = ['estado', 'tipo_trab', 'subarea', 'subarea__area']
     search_fields = ['apellidos_nombres', 'nro_doc', 'cargo', 'celular']
     ordering_fields = ['apellidos_nombres', 'fecha_alta', 'creado_en']
     ordering = ['apellidos_nombres']

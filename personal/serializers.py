@@ -2,16 +2,16 @@
 Serializers para la API REST del módulo personal.
 """
 from rest_framework import serializers
-from .models import Gerencia, Area, Personal, Roster, RosterAudit
+from .models import Area, SubArea, Personal, Roster, RosterAudit
 
 
-class GerenciaSerializer(serializers.ModelSerializer):
+class AreaSerializer(serializers.ModelSerializer):
     responsable_nombre = serializers.CharField(source='responsable.apellidos_nombres', read_only=True)
     total_areas = serializers.SerializerMethodField()
     total_personal = serializers.SerializerMethodField()
     
     class Meta:
-        model = Gerencia
+        model = Area
         fields = [
             'id', 'nombre', 'responsable', 'responsable_nombre',
             'descripcion', 'activa', 'total_areas', 'total_personal',
@@ -20,24 +20,24 @@ class GerenciaSerializer(serializers.ModelSerializer):
         read_only_fields = ['creado_en', 'actualizado_en']
     
     def get_total_areas(self, obj):
-        return obj.areas.filter(activa=True).count()
+        return obj.subareas.filter(activa=True).count()
     
     def get_total_personal(self, obj):
         from django.db.models import Count
         return Personal.objects.filter(
-            area__gerencia=obj,
+            subarea__area=obj,
             estado='Activo'
         ).count()
 
 
-class AreaSerializer(serializers.ModelSerializer):
-    gerencia_nombre = serializers.CharField(source='gerencia.nombre', read_only=True)
+class SubAreaSerializer(serializers.ModelSerializer):
+    area_nombre = serializers.CharField(source='area.nombre', read_only=True)
     total_personal = serializers.SerializerMethodField()
     
     class Meta:
-        model = Area
+        model = SubArea
         fields = [
-            'id', 'nombre', 'gerencia', 'gerencia_nombre',
+            'id', 'nombre', 'area', 'area_nombre',
             'descripcion', 'activa', 'total_personal',
             'creado_en', 'actualizado_en'
         ]
@@ -49,22 +49,22 @@ class AreaSerializer(serializers.ModelSerializer):
 
 class PersonalListSerializer(serializers.ModelSerializer):
     """Serializer ligero para listados."""
-    area_nombre = serializers.CharField(source='area.nombre', read_only=True)
-    gerencia_nombre = serializers.CharField(source='area.gerencia.nombre', read_only=True)
+    subarea_nombre = serializers.CharField(source='subarea.nombre', read_only=True)
+    area_nombre = serializers.CharField(source='subarea.area.nombre', read_only=True)
     
     class Meta:
         model = Personal
         fields = [
             'id', 'nro_doc', 'apellidos_nombres', 'cargo',
-            'tipo_trab', 'area', 'area_nombre', 'gerencia_nombre',
+            'tipo_trab', 'subarea', 'subarea_nombre', 'area_nombre',
             'estado', 'celular', 'correo_corporativo'
         ]
 
 
 class PersonalDetailSerializer(serializers.ModelSerializer):
     """Serializer completo para detalles."""
-    area_nombre = serializers.CharField(source='area.nombre', read_only=True)
-    gerencia_nombre = serializers.CharField(source='area.gerencia.nombre', read_only=True)
+    subarea_nombre = serializers.CharField(source='subarea.nombre', read_only=True)
+    area_nombre = serializers.CharField(source='subarea.area.nombre', read_only=True)
     usuario_username = serializers.CharField(source='usuario.username', read_only=True)
     
     class Meta:
@@ -95,13 +95,13 @@ class PersonalCreateUpdateSerializer(serializers.ModelSerializer):
 class RosterSerializer(serializers.ModelSerializer):
     personal_nombre = serializers.CharField(source='personal.apellidos_nombres', read_only=True)
     personal_doc = serializers.CharField(source='personal.nro_doc', read_only=True)
-    area_nombre = serializers.CharField(source='personal.area.nombre', read_only=True)
+    subarea_nombre = serializers.CharField(source='personal.subarea.nombre', read_only=True)
     
     class Meta:
         model = Roster
         fields = [
             'id', 'personal', 'personal_nombre', 'personal_doc',
-            'area_nombre', 'fecha', 'codigo',
+            'subarea_nombre', 'fecha', 'codigo',
             'observaciones', 'creado_en', 'actualizado_en'
         ]
         read_only_fields = ['creado_en', 'actualizado_en']

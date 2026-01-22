@@ -18,8 +18,8 @@
 Sistema de gestión de personal simplificado con las siguientes características:
 
 ### Modelos de Datos:
-1. **Gerencia**: Departamentos de alto nivel (1 responsable)
-2. **Area**: Áreas bajo gerencias
+1. **Area**: Áreas o departamentos de alto nivel (1 responsable)
+2. **SubArea**: SubÁreas bajo áreas
 3. **Personal**: Personal disponible con datos completos
 4. **Roster**: Programación de turnos con días libres ganados
 
