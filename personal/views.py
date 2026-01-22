@@ -8,8 +8,9 @@ from django.contrib import messages
 from django.db.models import Q, Count
 from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 import pandas as pd
 from datetime import datetime, timedelta
@@ -33,6 +34,24 @@ def home(request):
     areas_filtradas = filtrar_areas(request.user)
     personal_filtrado = filtrar_personal(request.user)
     
+    # Contar cambios pendientes de aprobación para líderes
+    cambios_pendientes = 0
+    if not request.user.is_superuser:
+        # Si es líder de gerencia o área, contar pendientes de su equipo
+        if hasattr(request.user, 'gerencia_liderada'):
+            cambios_pendientes = Roster.objects.filter(
+                estado='pendiente',
+                personal__area__gerencia=request.user.gerencia_liderada
+            ).count()
+        elif hasattr(request.user, 'area_liderada'):
+            cambios_pendientes = Roster.objects.filter(
+                estado='pendiente',
+                personal__area=request.user.area_liderada
+            ).count()
+    else:
+        # Admin ve todos los pendientes
+        cambios_pendientes = Roster.objects.filter(estado='pendiente').count()
+    
     context = {
         'total_gerencias': gerencias_filtradas.filter(activa=True).count(),
         'total_areas': areas_filtradas.filter(activa=True).count(),
@@ -41,6 +60,7 @@ def home(request):
             fecha=datetime.now().date(),
             personal__in=personal_filtrado
         ).count(),
+        'cambios_pendientes': cambios_pendientes,
     }
     context.update(get_context_usuario(request.user))
     return render(request, 'home.html', context)
@@ -1056,6 +1076,20 @@ def roster_update_cell(request):
         if not puede_editar_personal(request.user, personal):
             return JsonResponse({'success': False, 'error': 'No tienes permisos para editar este personal'}, status=403)
         
+        # Verificar restricciones de fecha (solo admin puede editar días anteriores)
+        if not request.user.is_superuser and fecha < datetime.now().date():
+            return JsonResponse({
+                'success': False, 
+                'error': 'Solo el administrador puede editar días anteriores al actual'
+            }, status=403)
+        
+        # No permitir editar antes de enero 2026
+        if fecha.year < 2026:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se puede editar el roster antes de enero 2026'
+            }, status=400)
+        
         # Validar que la fecha no sea anterior a la fecha de alta
         if personal.fecha_alta and fecha < personal.fecha_alta:
             return JsonResponse({
@@ -1089,14 +1123,31 @@ def roster_update_cell(request):
                     'old_value': codigo_anterior
                 }, status=400)
         
+        # Determinar el estado según el usuario
+        estado_inicial = 'aprobado'  # Por defecto aprobado para admin
+        
+        if not request.user.is_superuser:
+            # Para personal regular, el cambio va a borrador inicialmente
+            if hasattr(request.user, 'personal_data') and request.user.personal_data == personal:
+                estado_inicial = 'borrador'
+            # Para líderes, el cambio va aprobado directamente
+            elif hasattr(request.user, 'gerencia_liderada') or hasattr(request.user, 'area_liderada'):
+                estado_inicial = 'aprobado'
+        
         if codigo:
             # Crear o actualizar roster
             roster, created = Roster.objects.update_or_create(
                 personal=personal,
                 fecha=fecha,
-                defaults={'codigo': codigo}
+                defaults={
+                    'codigo': codigo,
+                    'estado': estado_inicial,
+                    'modificado_por': request.user
+                }
             )
             mensaje = 'Registro creado' if created else 'Registro actualizado'
+            if estado_inicial == 'borrador':
+                mensaje += ' (en borrador - debe enviar para aprobación)'
         else:
             # Eliminar si el código está vacío
             Roster.objects.filter(personal=personal, fecha=fecha).delete()
@@ -1129,3 +1180,116 @@ def roster_update_cell(request):
         error_traceback = traceback.format_exc()
         print(f"ERROR EN roster_update_cell: {error_traceback}")
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+# ================== SISTEMA DE APROBACIONES ==================
+
+@login_required
+def cambios_pendientes(request):
+    """Vista para gestionar cambios pendientes de aprobación."""
+    # Filtrar cambios según el rol del usuario
+    if request.user.is_superuser:
+        # Admin ve todos los cambios pendientes
+        pendientes = Roster.objects.filter(estado='pendiente')
+    elif hasattr(request.user, 'gerencia_liderada'):
+        # Líder de gerencia ve los de su gerencia
+        pendientes = Roster.objects.filter(
+            estado='pendiente',
+            personal__area__gerencia=request.user.gerencia_liderada
+        )
+    elif hasattr(request.user, 'area_liderada'):
+        # Líder de área ve los de su área
+        pendientes = Roster.objects.filter(
+            estado='pendiente',
+            personal__area=request.user.area_liderada
+        )
+    else:
+        # Personal regular no ve esta vista
+        messages.error(request, 'No tiene permisos para ver cambios pendientes.')
+        return redirect('home')
+    
+    pendientes = pendientes.select_related('personal', 'personal__area', 'modificado_por').order_by('-actualizado_en')
+    
+    context = {
+        'pendientes': pendientes,
+        'total_pendientes': pendientes.count()
+    }
+    
+    return render(request, 'personal/cambios_pendientes.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def aprobar_cambio(request, pk):
+    """Aprobar un cambio de roster pendiente."""
+    roster = get_object_or_404(Roster, pk=pk)
+    
+    # Verificar permisos
+    if not roster.puede_aprobar(request.user):
+        return JsonResponse({
+            'success': False,
+            'error': 'No tiene permisos para aprobar este cambio'
+        }, status=403)
+    
+    roster.estado = 'aprobado'
+    roster.aprobado_por = request.user
+    roster.aprobado_en = timezone.now()
+    roster.save()
+    
+    messages.success(request, f'Cambio aprobado para {roster.personal} en {roster.fecha}')
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'mensaje': 'Cambio aprobado'})
+    
+    return redirect('cambios_pendientes')
+
+
+@login_required
+@require_http_methods(["POST"])
+def rechazar_cambio(request, pk):
+    """Rechazar un cambio de roster pendiente (elimina el cambio)."""
+    roster = get_object_or_404(Roster, pk=pk)
+    
+    # Verificar permisos
+    if not roster.puede_aprobar(request.user):
+        return JsonResponse({
+            'success': False,
+            'error': 'No tiene permisos para rechazar este cambio'
+        }, status=403)
+    
+    personal_nombre = str(roster.personal)
+    fecha = roster.fecha
+    
+    # Eliminar el registro rechazado
+    roster.delete()
+    
+    messages.warning(request, f'Cambio rechazado y eliminado para {personal_nombre} en {fecha}')
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'mensaje': 'Cambio rechazado'})
+    
+    return redirect('cambios_pendientes')
+
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_cambios_aprobacion(request):
+    """Enviar cambios en borrador para aprobación."""
+    # Obtener los registros en borrador del usuario actual
+    if hasattr(request.user, 'personal_data'):
+        personal = request.user.personal_data
+        borradores = Roster.objects.filter(
+            personal=personal,
+            estado='borrador'
+        )
+        
+        count = borradores.update(estado='pendiente')
+        
+        if count > 0:
+            messages.success(request, f'{count} cambio(s) enviado(s) para aprobación')
+        else:
+            messages.info(request, 'No hay cambios pendientes de enviar')
+    else:
+        messages.error(request, 'No se pudo identificar su perfil de personal')
+    
+    return redirect('roster_matricial')

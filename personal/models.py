@@ -446,6 +446,45 @@ class Roster(models.Model):
         help_text="Origen del registro (archivo, usuario, etc.)"
     )
     
+    # --- Sistema de aprobaciones ---
+    ESTADO_CHOICES = [
+        ('aprobado', 'Aprobado'),
+        ('pendiente', 'Pendiente de Aprobación'),
+        ('borrador', 'Borrador'),
+    ]
+    
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default='aprobado',
+        verbose_name="Estado",
+        help_text="Estado del registro: borrador, pendiente o aprobado"
+    )
+    
+    modificado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roster_modificaciones',
+        verbose_name="Modificado por"
+    )
+    
+    aprobado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roster_aprobaciones',
+        verbose_name="Aprobado por"
+    )
+    
+    aprobado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Aprobación"
+    )
+    
     # --- Metadatos ---
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
@@ -458,10 +497,61 @@ class Roster(models.Model):
         indexes = [
             models.Index(fields=['personal', 'fecha']),
             models.Index(fields=['fecha']),
+            models.Index(fields=['estado']),
         ]
     
     def __str__(self):
         return f"{self.personal} - {self.fecha} - {self.codigo}"
+    
+    def puede_editar(self, usuario):
+        """Verifica si un usuario puede editar este registro de roster."""
+        from datetime import date
+        
+        # Admin puede editar todo
+        if usuario.is_superuser:
+            return True, ""
+        
+        # No se puede editar antes de enero 2026
+        if self.fecha.year < 2026:
+            return False, "No se puede editar registros anteriores a enero 2026"
+        
+        # Solo se puede editar del día actual en adelante (excepto admin)
+        if self.fecha < date.today():
+            return False, "Solo el administrador puede editar días anteriores"
+        
+        # Verificar si el usuario es el personal asignado
+        if hasattr(usuario, 'personal_data') and usuario.personal_data == self.personal:
+            return True, ""
+        
+        # Verificar si es líder de la gerencia o área
+        if hasattr(usuario, 'gerencia_liderada'):
+            # Es líder de gerencia
+            if self.personal.area and self.personal.area.gerencia == usuario.gerencia_liderada:
+                return True, ""
+        
+        if hasattr(usuario, 'area_liderada'):
+            # Es líder de área
+            if self.personal.area == usuario.area_liderada:
+                return True, ""
+        
+        return False, "No tiene permisos para editar este registro"
+    
+    def puede_aprobar(self, usuario):
+        """Verifica si un usuario puede aprobar cambios en este registro."""
+        # Admin puede aprobar todo
+        if usuario.is_superuser:
+            return True
+        
+        # Verificar si es líder de la gerencia o área del personal
+        if hasattr(usuario, 'gerencia_liderada'):
+            if self.personal.area and self.personal.area.gerencia == usuario.gerencia_liderada:
+                return True
+        
+        if hasattr(usuario, 'area_liderada'):
+            if self.personal.area == usuario.area_liderada:
+                return True
+        
+        return False
 
 
 class RosterAudit(models.Model):

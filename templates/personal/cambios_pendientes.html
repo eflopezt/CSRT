@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}Cambios Pendientes - Sistema de Gestión Personal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2"><i class="fas fa-tasks"></i> Cambios Pendientes de Aprobación</h1>
+    <a href="{% url 'roster_matricial' %}" class="btn btn-secondary">
+        <i class="fas fa-calendar-alt me-1"></i> Ver Roster
+    </a>
+</div>
+
+{% if total_pendientes == 0 %}
+<div class="alert alert-success">
+    <i class="fas fa-check-circle me-2"></i>
+    <strong>¡Todo al día!</strong> No hay cambios pendientes de aprobación.
+</div>
+{% else %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    Hay <strong>{{ total_pendientes }}</strong> cambio(s) pendiente(s) de su aprobación.
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-warning text-dark">
+        <i class="fas fa-clipboard-list me-2"></i> Lista de Cambios Pendientes
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Personal</th>
+                        <th>Área</th>
+                        <th>Código</th>
+                        <th>Modificado por</th>
+                        <th>Última actualización</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in pendientes %}
+                    <tr id="row-{{ item.pk }}">
+                        <td>
+                            <i class="fas fa-calendar-day text-muted me-1"></i>
+                            {{ item.fecha|date:"d/m/Y" }}
+                        </td>
+                        <td>
+                            <strong>{{ item.personal.nombre_completo }}</strong>
+                            <br>
+                            <small class="text-muted">{{ item.personal.nro_doc }}</small>
+                        </td>
+                        <td>
+                            {% if item.personal.area %}
+                                {{ item.personal.area.nombre }}
+                            {% else %}
+                                <span class="text-muted">Sin área</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ item.codigo }}</span>
+                        </td>
+                        <td>
+                            {% if item.modificado_por %}
+                                {{ item.modificado_por.get_full_name|default:item.modificado_por.username }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ item.actualizado_en|date:"d/m/Y H:i" }}
+                            </small>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-success btn-sm me-1" 
+                                    onclick="aprobarCambio({{ item.pk }})"
+                                    title="Aprobar">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" 
+                                    onclick="rechazarCambio({{ item.pk }})"
+                                    title="Rechazar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function aprobarCambio(pk) {
+    if (!confirm('¿Está seguro de aprobar este cambio?')) return;
+    
+    fetch(`/roster/aprobar/${pk}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById(`row-${pk}`).remove();
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al aprobar el cambio');
+    });
+}
+
+function rechazarCambio(pk) {
+    if (!confirm('¿Está seguro de rechazar y eliminar este cambio?')) return;
+    
+    fetch(`/roster/rechazar/${pk}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById(`row-${pk}`).remove();
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al rechazar el cambio');
+    });
+}
+</script>
+
+{% endblock %}
