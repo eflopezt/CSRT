@@ -44,10 +44,10 @@ def home(request):
     else:
         # Verificar si es responsable de área
         area = get_area_responsable(request.user)
-        if area_resp:
+        if area:
             cambios_pendientes = Roster.objects.filter(
                 estado='pendiente',
-                personal__subarea__area=area_resp
+                personal__subarea__area=area
             ).count()
     
     context = {
