@@ -104,6 +104,35 @@
     .codigo-F { background-color: #ffc107 !important; color: #000; } /* Amarillo fuerte - Feriado */
     .codigo-FC { background-color: #ffecb5 !important; } /* Amarillo pálido - Feriado Comp */
     
+    /* Estados de aprobación */
+    .estado-borrador {
+        border: 3px solid #ffc107 !important;
+        box-shadow: 0 0 8px rgba(255, 193, 7, 0.5) !important;
+    }
+    .estado-pendiente {
+        border: 3px solid #fd7e14 !important;
+        box-shadow: 0 0 8px rgba(253, 126, 20, 0.5) !important;
+    }
+    .estado-aprobado {
+        /* Sin borde especial, es el estado normal */
+    }
+    
+    /* Alerta de borradores flotante */
+    #borradores-alert {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1000;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        animation: slideInRight 0.3s ease;
+    }
+    
+    @keyframes slideInRight {
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
     /* Resaltar fines de semana */
     .dia-sabado { background-color: #f0f0f0 !important; }
     .dia-domingo { background-color: #e8e8e8 !important; }
@@ -258,6 +287,22 @@
 {% endblock %}
 
 {% block content %}
+<!-- Alerta de borradores flotante -->
+{% if borradores_count > 0 %}
+<div id="borradores-alert" class="alert alert-warning alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Cambios sin Enviar</h5>
+    <p class="mb-2">Tienes <strong>{{ borradores_count }} cambios en borrador</strong> que no han sido enviados para aprobación.</p>
+    <hr>
+    <form method="post" action="{% url 'enviar_cambios_aprobacion' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning btn-sm">
+            <i class="fas fa-paper-plane"></i> Enviar para Aprobación
+        </button>
+    </form>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+</div>
+{% endif %}
+
 <!-- Indicador de mes sticky -->
 <div class="mes-indicator no-print">
     <i class="fas fa-calendar-alt me-2"></i>
@@ -415,6 +460,7 @@
                                 {% if item.es_hoy %}dia-actual{% endif %}
                             "
                                 data-dia-semana="{{ item.fecha|date:'l' }}"
+                                {% if item.roster_id %}data-roster-id="{{ item.roster_id }}"{% endif %}
                             >
                                 <select 
                                     class="codigo-input" 
@@ -528,10 +574,22 @@
 </div>
 
 <script>
+// Diccionario de estados del roster
+const rosterEstados = {{ roster_estados|safe }};
+
 document.addEventListener('DOMContentLoaded', function() {
     const selects = document.querySelectorAll('.codigo-input');
     const tableContainer = document.querySelector('.table-container');
     const toggleBtn = document.getElementById('toggleCompactMode');
+    
+    // Aplicar estados a las celdas al cargar
+    selects.forEach(select => {
+        const td = select.parentElement;
+        const rosterId = td.dataset.rosterId;
+        if (rosterId && rosterEstados[rosterId]) {
+            td.classList.add('estado-' + rosterEstados[rosterId]);
+        }
+    });
     
     // Toggle modo compacto
     if (toggleBtn) {
@@ -612,6 +670,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 td.classList.add('saved');
                 updateCellColor(select);
+                
+                // Actualizar estado del roster
+                if (data.roster_id && data.estado) {
+                    td.dataset.rosterId = data.roster_id;
+                    // Remover clases de estado anteriores
+                    td.classList.remove('estado-borrador', 'estado-pendiente', 'estado-aprobado');
+                    // Agregar nueva clase de estado
+                    td.classList.add('estado-' + data.estado);
+                    // Actualizar diccionario local
+                    rosterEstados[data.roster_id] = data.estado;
+                    // Actualizar título
+                    td.title = 'Estado: ' + data.estado.charAt(0).toUpperCase() + data.estado.slice(1);
+                }
                 
                 // Actualizar días libres ganados si viene en la respuesta
                 if (data.dias_libres_ganados !== undefined) {

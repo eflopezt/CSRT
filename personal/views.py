@@ -411,10 +411,14 @@ def roster_matricial(request):
         personal__in=personal_qs
     ).select_related('personal')
     
-    # Organizar roster por personal y fecha
+    # Organizar roster por personal y fecha (incluyendo estado)
     roster_dict = defaultdict(dict)
+    roster_estados = defaultdict(dict)  # Nuevo: guardar estados
+    roster_ids = defaultdict(dict)  # Nuevo: guardar IDs de roster
     for r in rosters:
         roster_dict[r.personal_id][r.fecha] = r.codigo
+        roster_estados[r.personal_id][r.fecha] = r.estado  # Guardar estado
+        roster_ids[r.personal_id][r.fecha] = r.id  # Guardar ID
     
     # Construir datos para la tabla
     tabla_datos = []
@@ -425,11 +429,15 @@ def roster_matricial(request):
         codigos_mes = []
         for fecha in fechas_mes:
             codigo = roster_dict[persona.id].get(fecha, '')
+            estado = roster_estados[persona.id].get(fecha, 'aprobado')  # Nuevo: obtener estado
+            roster_id = roster_ids[persona.id].get(fecha, None)  # Nuevo: obtener ID
             # Determinar día de la semana (0=lunes, 6=domingo)
             dia_semana = fecha.weekday()
             codigos_mes.append({
                 'fecha': fecha,
                 'codigo': codigo,
+                'estado': estado,  # Nuevo: incluir estado
+                'roster_id': roster_id,  # Nuevo: incluir ID
                 'es_sabado': dia_semana == 5,
                 'es_domingo': dia_semana == 6,
                 'es_hoy': fecha == fecha_hoy
@@ -509,6 +517,19 @@ def roster_matricial(request):
     # Lista de años (últimos 3 y próximos 2)
     anios = list(range(hoy.year - 3, hoy.year + 3))
     
+    # Contar borradores del usuario actual (si es personal regular)
+    borradores_count = 0
+    if hasattr(request.user, 'personal_data'):
+        borradores_count = Roster.objects.filter(
+            personal=request.user.personal_data,
+            estado='borrador'
+        ).count()
+    
+    # Crear diccionario de estados por roster_id para JavaScript
+    roster_estados_dict = {}
+    for r in rosters:
+        roster_estados_dict[r.id] = r.estado
+    
     context = {
         'tabla_datos': tabla_datos_paginada,
         'fechas_mes': fechas_mes,
@@ -523,6 +544,8 @@ def roster_matricial(request):
         'page_obj': tabla_datos_paginada if paginator else None,
         'paginator': paginator,
         'per_page': per_page,
+        'borradores_count': borradores_count,  # Nuevo: contador de borradores
+        'roster_estados': json.dumps(roster_estados_dict),  # Nuevo: estados para JavaScript
     }
     
     return render(request, 'personal/roster_matricial.html', context)
@@ -1148,10 +1171,14 @@ def roster_update_cell(request):
             mensaje = 'Registro creado' if created else 'Registro actualizado'
             if estado_inicial == 'borrador':
                 mensaje += ' (en borrador - debe enviar para aprobación)'
+            roster_id = roster.id
+            estado = roster.estado
         else:
             # Eliminar si el código está vacío
             Roster.objects.filter(personal=personal, fecha=fecha).delete()
             mensaje = 'Registro eliminado'
+            roster_id = None
+            estado = None
         
         # Calcular días libres ganados y pendientes para retornar
         dias_libres_ganados = personal.dias_libres_ganados
@@ -1168,6 +1195,8 @@ def roster_update_cell(request):
             'success': True,
             'mensaje': mensaje,
             'codigo': codigo,
+            'roster_id': roster_id,
+            'estado': estado,
             'dias_libres_ganados': dias_libres_ganados,
             'dias_libres_pendientes': round(dias_libres_pendientes),
             'dias_libres_corte_2025': round(saldo_corte_2025)
@@ -1293,3 +1322,129 @@ def enviar_cambios_aprobacion(request):
         messages.error(request, 'No se pudo identificar su perfil de personal')
     
     return redirect('roster_matricial')
+
+
+# ================== GESTIÓN DE USUARIOS ==================
+
+@login_required
+def usuario_list(request):
+    """Lista de usuarios del sistema con sus perfiles vinculados."""
+    if not request.user.is_superuser:
+        messages.error(request, 'Solo los administradores pueden gestionar usuarios')
+        return redirect('home')
+    
+    from django.contrib.auth.models import User
+    
+    usuarios = User.objects.all().select_related('personal_data').order_by('username')
+    
+    # Buscar personal sin usuario asignado
+    personal_sin_usuario = Personal.objects.filter(
+        usuario__isnull=True,
+        estado='Activo'
+    ).order_by('apellidos_nombres')
+    
+    context = {
+        'usuarios': usuarios,
+        'personal_sin_usuario': personal_sin_usuario,
+        'total_usuarios': usuarios.count(),
+        'total_sin_vincular': personal_sin_usuario.count()
+    }
+    context.update(get_context_usuario(request.user))
+    
+    return render(request, 'personal/usuario_list.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def usuario_vincular(request):
+    """Vincular un usuario existente con un perfil de Personal."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
+    
+    from django.contrib.auth.models import User
+    
+    usuario_id = request.POST.get('usuario_id')
+    personal_id = request.POST.get('personal_id')
+    
+    try:
+        usuario = User.objects.get(pk=usuario_id)
+        personal = Personal.objects.get(pk=personal_id)
+        
+        # Desvincular cualquier otro usuario que tenga este personal
+        Personal.objects.filter(usuario=usuario).update(usuario=None)
+        
+        # Vincular
+        personal.usuario = usuario
+        personal.save()
+        
+        messages.success(request, f'Usuario {usuario.username} vinculado con {personal.nombre_completo}')
+        return redirect('usuario_list')
+        
+    except (User.DoesNotExist, Personal.DoesNotExist) as e:
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('usuario_list')
+
+
+@login_required
+@require_http_methods(["POST"])
+def usuario_crear_y_vincular(request):
+    """Crear un nuevo usuario y vincularlo automáticamente con Personal."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
+    
+    from django.contrib.auth.models import User
+    
+    personal_id = request.POST.get('personal_id')
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+    email = request.POST.get('email', '')
+    
+    try:
+        personal = Personal.objects.get(pk=personal_id)
+        
+        # Verificar si ya existe el username
+        if User.objects.filter(username=username).exists():
+            messages.error(request, f'El usuario "{username}" ya existe')
+            return redirect('usuario_list')
+        
+        # Crear usuario
+        usuario = User.objects.create_user(
+            username=username,
+            password=password,
+            email=email,
+            first_name=personal.apellidos_nombres.split(',')[1].strip() if ',' in personal.apellidos_nombres else '',
+            last_name=personal.apellidos_nombres.split(',')[0].strip() if ',' in personal.apellidos_nombres else personal.apellidos_nombres
+        )
+        
+        # Vincular con personal
+        personal.usuario = usuario
+        personal.save()
+        
+        messages.success(request, f'Usuario {username} creado y vinculado con {personal.nombre_completo}')
+        return redirect('usuario_list')
+        
+    except Personal.DoesNotExist:
+        messages.error(request, 'Personal no encontrado')
+        return redirect('usuario_list')
+    except Exception as e:
+        messages.error(request, f'Error al crear usuario: {str(e)}')
+        return redirect('usuario_list')
+
+
+@login_required
+@require_http_methods(["POST"])
+def usuario_desvincular(request, user_id):
+    """Desvincular un usuario de su perfil de Personal."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'No autorizado'}, status=403)
+    
+    try:
+        personal = Personal.objects.get(usuario_id=user_id)
+        personal.usuario = None
+        personal.save()
+        
+        messages.success(request, 'Usuario desvinculado correctamente')
+    except Personal.DoesNotExist:
+        messages.warning(request, 'El usuario no estaba vinculado')
+    
+    return redirect('usuario_list')

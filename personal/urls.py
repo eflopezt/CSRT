@@ -49,4 +49,10 @@ urlpatterns = [
     path('roster/aprobar/<int:pk>/', views.aprobar_cambio, name='aprobar_cambio'),
     path('roster/rechazar/<int:pk>/', views.rechazar_cambio, name='rechazar_cambio'),
     path('roster/enviar-aprobacion/', views.enviar_cambios_aprobacion, name='enviar_cambios_aprobacion'),
+    
+    # Gestión de Usuarios
+    path('usuarios/', views.usuario_list, name='usuario_list'),
+    path('usuarios/vincular/', views.usuario_vincular, name='usuario_vincular'),
+    path('usuarios/crear-vincular/', views.usuario_crear_y_vincular, name='usuario_crear_y_vincular'),
+    path('usuarios/desvincular/<int:user_id>/', views.usuario_desvincular, name='usuario_desvincular'),
 ]
