@@ -45,10 +45,13 @@ urlpatterns = [
     path('roster/update-cell/', views.roster_update_cell, name='roster_update_cell'),
     
     # Sistema de Aprobaciones
+    path('aprobaciones/', views.dashboard_aprobaciones, name='dashboard_aprobaciones'),
     path('roster/cambios-pendientes/', views.cambios_pendientes, name='cambios_pendientes'),
     path('roster/aprobar/<int:pk>/', views.aprobar_cambio, name='aprobar_cambio'),
     path('roster/rechazar/<int:pk>/', views.rechazar_cambio, name='rechazar_cambio'),
     path('roster/enviar-aprobacion/', views.enviar_cambios_aprobacion, name='enviar_cambios_aprobacion'),
+    path('roster/aprobar-lote/', views.aprobar_lote, name='aprobar_lote'),
+    path('roster/rechazar-lote/', views.rechazar_lote, name='rechazar_lote'),
     
     # Gestión de Usuarios
     path('usuarios/', views.usuario_list, name='usuario_list'),

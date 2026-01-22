@@ -1212,36 +1212,95 @@ def roster_update_cell(request):
 # ================== SISTEMA DE APROBACIONES ==================
 
 @login_required
-def cambios_pendientes(request):
-    """Vista para gestionar cambios pendientes de aprobación."""
+def dashboard_aprobaciones(request):
+    """Dashboard completo de aprobaciones para responsables."""
     from .permissions import get_gerencia_responsable
+    from django.db.models import Q, Count
     
-    # Filtrar cambios según el rol del usuario
+    # Verificar permisos
+    gerencia = None
     if request.user.is_superuser:
-        # Admin ve todos los cambios pendientes
-        pendientes = Roster.objects.filter(estado='pendiente')
+        pendientes_qs = Roster.objects.filter(estado='pendiente')
+        borradores_qs = Roster.objects.filter(estado='borrador')
+        aprobados_qs = Roster.objects.filter(estado='aprobado')
     else:
-        # Verificar si es responsable de gerencia
         gerencia = get_gerencia_responsable(request.user)
-        if gerencia:
-            # Líder de gerencia ve los de su gerencia
-            pendientes = Roster.objects.filter(
-                estado='pendiente',
-                personal__area__gerencia=gerencia
-            )
-        else:
-            # Personal regular no ve esta vista
-            messages.error(request, 'No tiene permisos para ver cambios pendientes.')
+        if not gerencia:
+            messages.error(request, 'No tiene permisos para ver el dashboard de aprobaciones.')
             return redirect('home')
+        
+        pendientes_qs = Roster.objects.filter(estado='pendiente', personal__area__gerencia=gerencia)
+        borradores_qs = Roster.objects.filter(estado='borrador', personal__area__gerencia=gerencia)
+        aprobados_qs = Roster.objects.filter(estado='aprobado', personal__area__gerencia=gerencia)
     
-    pendientes = pendientes.select_related('personal', 'personal__area', 'modificado_por').order_by('-actualizado_en')
+    # Filtros
+    buscar = request.GET.get('buscar', '')
+    area_filtro = request.GET.get('area', '')
+    codigo_filtro = request.GET.get('codigo', '')
+    fecha_desde = request.GET.get('fecha_desde', '')
+    fecha_hasta = request.GET.get('fecha_hasta', '')
+    
+    # Aplicar filtros a pendientes
+    if buscar:
+        pendientes_qs = pendientes_qs.filter(
+            Q(personal__nro_doc__icontains=buscar) |
+            Q(personal__apellidos_nombres__icontains=buscar)
+        )
+    
+    if area_filtro:
+        pendientes_qs = pendientes_qs.filter(personal__area_id=area_filtro)
+    
+    if codigo_filtro:
+        pendientes_qs = pendientes_qs.filter(codigo=codigo_filtro)
+    
+    if fecha_desde:
+        pendientes_qs = pendientes_qs.filter(fecha__gte=fecha_desde)
+    
+    if fecha_hasta:
+        pendientes_qs = pendientes_qs.filter(fecha__lte=fecha_hasta)
+    
+    pendientes = pendientes_qs.select_related(
+        'personal', 'personal__area', 'modificado_por'
+    ).order_by('-actualizado_en')
+    
+    # Estadísticas
+    hoy = timezone.now().date()
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    
+    stats = {
+        'pendientes': pendientes_qs.count(),
+        'borradores': borradores_qs.count(),
+        'aprobados_hoy': aprobados_qs.filter(aprobado_en__date=hoy).count(),
+        'total_semana': aprobados_qs.filter(aprobado_en__date__gte=inicio_semana).count(),
+    }
+    
+    # Obtener áreas para filtro
+    if request.user.is_superuser:
+        areas = Area.objects.filter(activa=True).order_by('nombre')
+    elif gerencia:
+        areas = Area.objects.filter(gerencia=gerencia, activa=True).order_by('nombre')
+    else:
+        areas = Area.objects.none()
     
     context = {
         'pendientes': pendientes,
-        'total_pendientes': pendientes.count()
+        'stats': stats,
+        'gerencia': gerencia,
+        'areas': areas,
+        'buscar': buscar,
+        'area_filtro': area_filtro,
+        'codigo_filtro': codigo_filtro,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
     }
     
-    return render(request, 'personal/cambios_pendientes.html', context)
+    return render(request, 'personal/dashboard_aprobaciones.html', context)
+
+
+@login_required
+def cambios_pendientes(request):
+    """Vista simplificada - redirige al dashboard."""
+    return redirect('dashboard_aprobaciones')
 
 
 @login_required
@@ -1319,6 +1378,69 @@ def enviar_cambios_aprobacion(request):
         messages.error(request, 'No se pudo identificar su perfil de personal')
     
     return redirect('roster_matricial')
+
+
+@login_required
+@require_http_methods(["POST"])
+def aprobar_lote(request):
+    """Aprobar múltiples cambios en lote."""
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'No se proporcionaron IDs'}, status=400)
+        
+        # Filtrar solo los que el usuario puede aprobar
+        rosters = Roster.objects.filter(pk__in=ids, estado='pendiente')
+        
+        aprobados = 0
+        for roster in rosters:
+            if roster.puede_aprobar(request.user):
+                roster.estado = 'aprobado'
+                roster.aprobado_por = request.user
+                roster.aprobado_en = timezone.now()
+                roster.save()
+                aprobados += 1
+        
+        return JsonResponse({
+            'success': True,
+            'aprobados': aprobados,
+            'mensaje': f'{aprobados} cambio(s) aprobado(s)'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def rechazar_lote(request):
+    """Rechazar múltiples cambios en lote."""
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'No se proporcionaron IDs'}, status=400)
+        
+        # Filtrar solo los que el usuario puede rechazar
+        rosters = Roster.objects.filter(pk__in=ids, estado='pendiente')
+        
+        rechazados = 0
+        for roster in rosters:
+            if roster.puede_aprobar(request.user):
+                roster.delete()
+                rechazados += 1
+        
+        return JsonResponse({
+            'success': True,
+            'rechazados': rechazados,
+            'mensaje': f'{rechazados} cambio(s) rechazado(s)'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
 # ================== GESTIÓN DE USUARIOS ==================

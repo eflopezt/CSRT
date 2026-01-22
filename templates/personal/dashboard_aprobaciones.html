@@ -1,0 +1,442 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard de Aprobaciones - Sistema de Gestión Personal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .stat-card.pendiente {
+        border-color: #ffc107;
+    }
+    .stat-card.aprobado {
+        border-color: #28a745;
+    }
+    .stat-card.borrador {
+        border-color: #6c757d;
+    }
+    .table-aprobaciones tbody tr {
+        transition: background-color 0.2s;
+    }
+    .table-aprobaciones tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    .badge-codigo {
+        font-size: 0.9rem;
+        padding: 0.4em 0.8em;
+    }
+    .selected-row {
+        background-color: #fff3cd !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="fas fa-tasks"></i> Dashboard de Aprobaciones
+        {% if gerencia %}
+            <span class="text-muted fs-6">- {{ gerencia.nombre }}</span>
+        {% endif %}
+    </h1>
+    <div>
+        <a href="{% url 'roster_matricial' %}" class="btn btn-secondary">
+            <i class="fas fa-calendar-alt me-1"></i> Ver Roster
+        </a>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card pendiente shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Pendientes</h6>
+                        <h2 class="mb-0 text-warning">{{ stats.pendientes }}</h2>
+                    </div>
+                    <div class="text-warning">
+                        <i class="fas fa-clock fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card borrador shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Borradores</h6>
+                        <h2 class="mb-0 text-secondary">{{ stats.borradores }}</h2>
+                    </div>
+                    <div class="text-secondary">
+                        <i class="fas fa-edit fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card aprobado shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Aprobados Hoy</h6>
+                        <h2 class="mb-0 text-success">{{ stats.aprobados_hoy }}</h2>
+                    </div>
+                    <div class="text-success">
+                        <i class="fas fa-check-circle fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card shadow-sm" style="border-color: #17a2b8;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Esta Semana</h6>
+                        <h2 class="mb-0 text-info">{{ stats.total_semana }}</h2>
+                    </div>
+                    <div class="text-info">
+                        <i class="fas fa-calendar-week fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if pendientes %}
+<div class="card shadow-sm">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-clipboard-list me-2"></i> 
+            <strong>Cambios Pendientes de Aprobación</strong>
+            <span class="badge bg-dark ms-2">{{ pendientes|length }}</span>
+        </div>
+        <div>
+            <button type="button" class="btn btn-sm btn-success me-1" onclick="aprobarSeleccionados()">
+                <i class="fas fa-check-double"></i> Aprobar Seleccionados
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="rechazarSeleccionados()">
+                <i class="fas fa-times-circle"></i> Rechazar Seleccionados
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="card-body border-bottom">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="buscar" class="form-control form-control-sm" 
+                       placeholder="Buscar por DNI o nombre..." value="{{ buscar }}">
+            </div>
+            <div class="col-md-2">
+                <select name="area" class="form-select form-select-sm">
+                    <option value="">Todas las áreas</option>
+                    {% for a in areas %}
+                    <option value="{{ a.id }}" {% if area_filtro == a.id|stringformat:"s" %}selected{% endif %}>
+                        {{ a.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="codigo" class="form-select form-select-sm">
+                    <option value="">Todos los códigos</option>
+                    <option value="DL" {% if codigo_filtro == 'DL' %}selected{% endif %}>DL - Día Libre</option>
+                    <option value="DLA" {% if codigo_filtro == 'DLA' %}selected{% endif %}>DLA - DL Acumulado</option>
+                    <option value="DM" {% if codigo_filtro == 'DM' %}selected{% endif %}>DM - Descanso Médico</option>
+                    <option value="V" {% if codigo_filtro == 'V' %}selected{% endif %}>V - Vacaciones</option>
+                    <option value="T" {% if codigo_filtro == 'T' %}selected{% endif %}>T - Trabajo</option>
+                    <option value="TR" {% if codigo_filtro == 'TR' %}selected{% endif %}>TR - Trabajo Remoto</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="fecha_desde" class="form-control form-control-sm" 
+                       placeholder="Desde" value="{{ fecha_desde }}">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="fecha_hasta" class="form-control form-control-sm" 
+                       placeholder="Hasta" value="{{ fecha_hasta }}">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-aprobaciones table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        <th>Fecha</th>
+                        <th>Personal</th>
+                        <th>DNI</th>
+                        <th>Área</th>
+                        <th>Código</th>
+                        <th>Modificado por</th>
+                        <th>Actualizado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in pendientes %}
+                    <tr id="row-{{ item.pk }}" data-roster-id="{{ item.pk }}">
+                        <td>
+                            <input type="checkbox" class="form-check-input row-checkbox" 
+                                   value="{{ item.pk }}">
+                        </td>
+                        <td>
+                            <i class="fas fa-calendar-day text-muted me-1"></i>
+                            <strong>{{ item.fecha|date:"d/m/Y" }}</strong>
+                            <br>
+                            <small class="text-muted">{{ item.fecha|date:"l" }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ item.personal.apellidos_nombres }}</strong>
+                            <br>
+                            <small class="text-muted">{{ item.personal.cargo|default:"-" }}</small>
+                        </td>
+                        <td>
+                            <code>{{ item.personal.nro_doc }}</code>
+                        </td>
+                        <td>
+                            {% if item.personal.area %}
+                                <span class="badge bg-secondary">{{ item.personal.area.nombre }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-codigo 
+                                {% if item.codigo == 'DL' or item.codigo == 'DLA' %}bg-primary
+                                {% elif item.codigo == 'DM' %}bg-danger
+                                {% elif item.codigo == 'V' %}bg-info
+                                {% else %}bg-success{% endif %}">
+                                {{ item.codigo }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.modificado_por %}
+                                <i class="fas fa-user text-muted me-1"></i>
+                                {{ item.modificado_por.get_full_name|default:item.modificado_por.username }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ item.actualizado_en|date:"d/m H:i" }}
+                            </small>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-success btn-sm me-1" 
+                                    onclick="aprobarCambio({{ item.pk }})"
+                                    title="Aprobar">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" 
+                                    onclick="rechazarCambio({{ item.pk }})"
+                                    title="Rechazar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-success">
+    <i class="fas fa-check-circle me-2"></i>
+    <strong>¡Todo al día!</strong> No hay cambios pendientes de aprobación.
+</div>
+{% endif %}
+
+<script>
+const csrftoken = getCookie('csrftoken');
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Seleccionar todos
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = this.checked;
+        if (this.checked) {
+            cb.closest('tr').classList.add('selected-row');
+        } else {
+            cb.closest('tr').classList.remove('selected-row');
+        }
+    });
+});
+
+// Marcar fila seleccionada
+document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            this.closest('tr').classList.add('selected-row');
+        } else {
+            this.closest('tr').classList.remove('selected-row');
+        }
+    });
+});
+
+function aprobarCambio(id) {
+    if (!confirm('¿Aprobar este cambio?')) return;
+    
+    fetch(`/roster/aprobar/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const row = document.getElementById(`row-${id}`);
+            row.style.backgroundColor = '#d4edda';
+            setTimeout(() => {
+                row.remove();
+                location.reload();
+            }, 500);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al aprobar el cambio');
+    });
+}
+
+function rechazarCambio(id) {
+    if (!confirm('¿Rechazar este cambio? Se eliminará del roster.')) return;
+    
+    fetch(`/roster/rechazar/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const row = document.getElementById(`row-${id}`);
+            row.style.backgroundColor = '#f8d7da';
+            setTimeout(() => {
+                row.remove();
+                location.reload();
+            }, 500);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al rechazar el cambio');
+    });
+}
+
+function aprobarSeleccionados() {
+    const selected = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+        alert('Selecciona al menos un cambio');
+        return;
+    }
+    
+    if (!confirm(`¿Aprobar ${selected.length} cambio(s) seleccionado(s)?`)) return;
+    
+    fetch('{% url "aprobar_lote" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({ ids: selected })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`${data.aprobados} cambio(s) aprobado(s)`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al aprobar los cambios');
+    });
+}
+
+function rechazarSeleccionados() {
+    const selected = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+        alert('Selecciona al menos un cambio');
+        return;
+    }
+    
+    if (!confirm(`¿Rechazar ${selected.length} cambio(s) seleccionado(s)? Se eliminarán del roster.`)) return;
+    
+    fetch('{% url "rechazar_lote" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({ ids: selected })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`${data.rechazados} cambio(s) rechazado(s)`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al rechazar los cambios');
+    });
+}
+</script>
+{% endblock %}
