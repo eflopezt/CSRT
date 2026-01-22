@@ -128,7 +128,7 @@ def area_update(request, pk):
     
     return render(request, 'personal/gerencia_form.html', {
         'form': form,
-        'area': area_resp
+        'area': area
     })
 
 
@@ -1261,13 +1261,13 @@ def dashboard_aprobaciones(request):
         aprobados_qs = Roster.objects.filter(estado='aprobado')
     else:
         area = get_area_responsable(request.user)
-        if not area_resp:
+        if not area:
             messages.error(request, 'No tiene permisos para ver el dashboard de aprobaciones.')
             return redirect('home')
         
-        pendientes_qs = Roster.objects.filter(estado='pendiente', personal__subarea__area=area_resp)
-        borradores_qs = Roster.objects.filter(estado='borrador', personal__subarea__area=area_resp)
-        aprobados_qs = Roster.objects.filter(estado='aprobado', personal__subarea__area=area_resp)
+        pendientes_qs = Roster.objects.filter(estado='pendiente', personal__subarea__area=area)
+        borradores_qs = Roster.objects.filter(estado='borrador', personal__subarea__area=area)
+        aprobados_qs = Roster.objects.filter(estado='aprobado', personal__subarea__area=area)
     
     # Filtros
     buscar = request.GET.get('buscar', '')
@@ -1313,7 +1313,7 @@ def dashboard_aprobaciones(request):
     # Obtener áreas para filtro
     if request.user.is_superuser:
         areas = SubArea.objects.filter(activa=True).order_by('nombre')
-    elif area_resp:
+    elif area:
         areas = SubArea.objects.filter(area=area, activa=True).order_by('nombre')
     else:
         areas = SubArea.objects.none()
@@ -1321,7 +1321,7 @@ def dashboard_aprobaciones(request):
     context = {
         'pendientes': pendientes,
         'stats': stats,
-        'area': area_resp,
+        'area': area,
         'subareas': subareas,
         'buscar': buscar,
         'area_filtro': area_filtro,

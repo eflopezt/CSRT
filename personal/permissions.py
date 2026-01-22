@@ -110,6 +110,6 @@ def get_context_usuario(user):
     
     return {
         'es_responsable': es_responsable,
-        'area_responsable': area_resp,
+        'area_responsable': area,
         'es_superusuario': user.is_superuser,
     }
