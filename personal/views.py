@@ -1145,14 +1145,16 @@ def roster_update_cell(request):
                 }, status=400)
         
         # Determinar el estado según el usuario
+        from .permissions import get_gerencia_responsable
+        
         estado_inicial = 'aprobado'  # Por defecto aprobado para admin
         
         if not request.user.is_superuser:
             # Para personal regular, el cambio va a borrador inicialmente
             if hasattr(request.user, 'personal_data') and request.user.personal_data == personal:
                 estado_inicial = 'borrador'
-            # Para líderes, el cambio va aprobado directamente
-            elif hasattr(request.user, 'gerencia_liderada') or hasattr(request.user, 'area_liderada'):
+            # Para líderes/responsables, el cambio va aprobado directamente
+            elif get_gerencia_responsable(request.user):
                 estado_inicial = 'aprobado'
         
         if codigo:
