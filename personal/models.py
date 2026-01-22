@@ -33,9 +33,21 @@ class Gerencia(models.Model):
         verbose_name = "Gerencia"
         verbose_name_plural = "Gerencias"
         ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['nombre']),
+            models.Index(fields=['activa']),
+        ]
     
     def __str__(self):
         return self.nombre
+    
+    def clean(self):
+        """Validación del modelo usando validadores centralizados."""
+        from .validators import GerenciaValidator
+        
+        # Validar que el responsable no esté asignado a otra gerencia
+        if self.responsable:
+            GerenciaValidator.validar_responsable_unico(self.responsable, self.pk)
 
 
 class Area(models.Model):
@@ -60,6 +72,10 @@ class Area(models.Model):
         verbose_name_plural = "Áreas"
         ordering = ['gerencia', 'nombre']
         unique_together = ['nombre', 'gerencia']
+        indexes = [
+            models.Index(fields=['gerencia', 'activa']),
+            models.Index(fields=['nombre']),
+        ]
     
     def __str__(self):
         return f"{self.gerencia.nombre} - {self.nombre}"
@@ -410,6 +426,39 @@ class Personal(models.Model):
     def nombre_completo(self):
         return self.apellidos_nombres
     
+    def clean(self):
+        """Validación del modelo usando validadores centralizados."""
+        from .validators import PersonalValidator
+        
+        # Validar número de documento
+        if self.nro_doc:
+            PersonalValidator.validar_nro_doc(self.nro_doc, self.tipo_doc)
+        
+        # Validar régimen de turno
+        if self.regimen_turno:
+            PersonalValidator.validar_regimen_turno(self.regimen_turno)
+        
+        # Validar fechas
+        if self.fecha_alta and self.fecha_cese:
+            PersonalValidator.validar_rango_fechas(self.fecha_alta, self.fecha_cese)
+        
+        # Validar montos
+        if self.sueldo_base:
+            PersonalValidator.validar_monto(
+                self.sueldo_base, 
+                campo='sueldo base',
+                minimo=0.01,
+                maximo=999999.99
+            )
+        
+        if self.bonos:
+            PersonalValidator.validar_monto(
+                self.bonos,
+                campo='bonos',
+                minimo=0,
+                maximo=999999.99
+            )
+    
     @property
     def esta_activo(self):
         return self.estado == 'Activo'
@@ -550,6 +599,23 @@ class Roster(models.Model):
             return True
         
         return False
+    
+    def clean(self):
+        """Validación del modelo usando validadores centralizados."""
+        from .validators import RosterValidator
+        import logging
+        
+        logger = logging.getLogger('personal.business')
+        
+        # Validar código
+        if self.codigo:
+            self.codigo = RosterValidator.validar_codigo(self.codigo)
+        
+        # Validar duplicados (solo si es un nuevo registro o cambió personal/fecha)
+        if not self.pk or self._state.adding:
+            RosterValidator.validar_duplicado(self.personal, self.fecha)
+        
+        logger.info(f"Roster validado: {self.personal} - {self.fecha} - {self.codigo}")
 
 
 class RosterAudit(models.Model):

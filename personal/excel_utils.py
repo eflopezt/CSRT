@@ -5,6 +5,9 @@ import pandas as pd
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
 from io import BytesIO
+import logging
+
+logger = logging.getLogger('personal')
 
 
 def crear_excel_con_validaciones(datos_principales, nombre_hoja_principal, catalogos=None, columnas_validacion=None):
@@ -22,80 +25,86 @@ def crear_excel_con_validaciones(datos_principales, nombre_hoja_principal, catal
     """
     output = BytesIO()
     
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Escribir hoja principal
-        datos_principales.to_excel(writer, index=False, sheet_name=nombre_hoja_principal)
-        
-        # Escribir hojas de catálogos
-        if catalogos:
-            for nombre_catalogo, df_catalogo in catalogos.items():
-                df_catalogo.to_excel(writer, index=False, sheet_name=nombre_catalogo)
-        
-        # Aplicar estilos y validaciones
-        workbook = writer.book
-        hoja_principal = writer.sheets[nombre_hoja_principal]
-        
-        # Estilo del encabezado
-        header_fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
-        header_font = Font(color='FFFFFF', bold=True)
-        
-        for cell in hoja_principal[1]:
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-        
-        # Ajustar ancho de columnas
-        for column in hoja_principal.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            hoja_principal.column_dimensions[column_letter].width = adjusted_width
-        
-        # Aplicar validaciones de datos
-        if columnas_validacion and catalogos:
-            for columna, catalogo_nombre in columnas_validacion.items():
-                # Buscar el índice de la columna
-                col_idx = None
-                for idx, cell in enumerate(hoja_principal[1], start=1):
-                    if cell.value == columna:
-                        col_idx = idx
-                        break
-                
-                if col_idx and catalogo_nombre in catalogos:
-                    # Obtener la hoja del catálogo
-                    hoja_catalogo = writer.sheets[catalogo_nombre]
+    try:
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Escribir hoja principal
+            datos_principales.to_excel(writer, index=False, sheet_name=nombre_hoja_principal)
+            
+            # Escribir hojas de catálogos
+            if catalogos:
+                for nombre_catalogo, df_catalogo in catalogos.items():
+                    df_catalogo.to_excel(writer, index=False, sheet_name=nombre_catalogo)
+            
+            # Aplicar estilos y validaciones
+            workbook = writer.book
+            hoja_principal = writer.sheets[nombre_hoja_principal]
+            
+            # Estilo del encabezado
+            header_fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
+            header_font = Font(color='FFFFFF', bold=True)
+            
+            for cell in hoja_principal[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            # Ajustar ancho de columnas
+            for column in hoja_principal.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except Exception:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                hoja_principal.column_dimensions[column_letter].width = adjusted_width
+            
+            # Aplicar validaciones de datos
+            if columnas_validacion and catalogos:
+                for columna, catalogo_nombre in columnas_validacion.items():
+                    # Buscar el índice de la columna
+                    col_idx = None
+                    for idx, cell in enumerate(hoja_principal[1], start=1):
+                        if cell.value == columna:
+                            col_idx = idx
+                            break
                     
-                    # Contar filas del catálogo
-                    num_filas_catalogo = catalogos[catalogo_nombre].shape[0]
-                    
-                    # Crear validación de datos (lista desplegable)
-                    from openpyxl.utils import get_column_letter
-                    col_letter = get_column_letter(col_idx)
-                    
-                    # Fórmula para la lista (referencia a la hoja de catálogo)
-                    formula = f"'{catalogo_nombre}'!$A$2:$A${num_filas_catalogo + 1}"
-                    
-                    dv = DataValidation(
-                        type="list",
-                        formula1=formula,
-                        allow_blank=True,
-                        showErrorMessage=True,
-                        errorTitle='Valor inválido',
-                        error='Por favor, selecciona un valor de la lista'
-                    )
-                    
-                    # Aplicar validación a las filas de datos (desde fila 2 hasta 1000)
-                    dv.add(f'{col_letter}2:{col_letter}1000')
-                    hoja_principal.add_data_validation(dv)
+                    if col_idx and catalogo_nombre in catalogos:
+                        # Obtener la hoja del catálogo
+                        hoja_catalogo = writer.sheets[catalogo_nombre]
+                        
+                        # Contar filas del catálogo
+                        num_filas_catalogo = catalogos[catalogo_nombre].shape[0]
+                        
+                        # Crear validación de datos (lista desplegable)
+                        from openpyxl.utils import get_column_letter
+                        col_letter = get_column_letter(col_idx)
+                        
+                        # Fórmula para la lista (referencia a la hoja de catálogo)
+                        formula = f"'{catalogo_nombre}'!$A$2:$A${num_filas_catalogo + 1}"
+                        
+                        dv = DataValidation(
+                            type="list",
+                            formula1=formula,
+                            allow_blank=True,
+                            showErrorMessage=True,
+                            errorTitle='Valor inválido',
+                            error='Por favor, selecciona un valor de la lista'
+                        )
+                        
+                        # Aplicar validación a las filas de datos (desde fila 2 hasta 1000)
+                        dv.add(f'{col_letter}2:{col_letter}1000')
+                        hoja_principal.add_data_validation(dv)
+            
+            # Congelar primera fila
+            hoja_principal.freeze_panes = 'A2'
         
-        # Congelar primera fila
-        hoja_principal.freeze_panes = 'A2'
+        logger.info(f"Excel creado exitosamente: {nombre_hoja_principal}")
+    except Exception as e:
+        logger.error(f"Error al crear Excel: {str(e)}")
+        raise
     
     output.seek(0)
     return output
