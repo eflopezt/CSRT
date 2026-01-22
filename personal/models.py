@@ -538,18 +538,16 @@ class Roster(models.Model):
     
     def puede_aprobar(self, usuario):
         """Verifica si un usuario puede aprobar cambios en este registro."""
+        from .permissions import get_gerencia_responsable
+        
         # Admin puede aprobar todo
         if usuario.is_superuser:
             return True
         
-        # Verificar si es líder de la gerencia o área del personal
-        if hasattr(usuario, 'gerencia_liderada'):
-            if self.personal.area and self.personal.area.gerencia == usuario.gerencia_liderada:
-                return True
-        
-        if hasattr(usuario, 'area_liderada'):
-            if self.personal.area == usuario.area_liderada:
-                return True
+        # Verificar si es responsable de la gerencia del personal
+        gerencia = get_gerencia_responsable(usuario)
+        if gerencia and self.personal.area and self.personal.area.gerencia == gerencia:
+            return True
         
         return False
 

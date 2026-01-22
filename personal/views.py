@@ -29,6 +29,8 @@ from .permissions import (
 @login_required
 def home(request):
     """Vista principal del sistema."""
+    from .permissions import get_gerencia_responsable
+    
     # Aplicar filtros según usuario
     gerencias_filtradas = filtrar_gerencias(request.user)
     areas_filtradas = filtrar_areas(request.user)
@@ -36,21 +38,17 @@ def home(request):
     
     # Contar cambios pendientes de aprobación para líderes
     cambios_pendientes = 0
-    if not request.user.is_superuser:
-        # Si es líder de gerencia o área, contar pendientes de su equipo
-        if hasattr(request.user, 'gerencia_liderada'):
-            cambios_pendientes = Roster.objects.filter(
-                estado='pendiente',
-                personal__area__gerencia=request.user.gerencia_liderada
-            ).count()
-        elif hasattr(request.user, 'area_liderada'):
-            cambios_pendientes = Roster.objects.filter(
-                estado='pendiente',
-                personal__area=request.user.area_liderada
-            ).count()
-    else:
+    if request.user.is_superuser:
         # Admin ve todos los pendientes
         cambios_pendientes = Roster.objects.filter(estado='pendiente').count()
+    else:
+        # Verificar si es responsable de gerencia
+        gerencia = get_gerencia_responsable(request.user)
+        if gerencia:
+            cambios_pendientes = Roster.objects.filter(
+                estado='pendiente',
+                personal__area__gerencia=gerencia
+            ).count()
     
     context = {
         'total_gerencias': gerencias_filtradas.filter(activa=True).count(),
@@ -1216,26 +1214,25 @@ def roster_update_cell(request):
 @login_required
 def cambios_pendientes(request):
     """Vista para gestionar cambios pendientes de aprobación."""
+    from .permissions import get_gerencia_responsable
+    
     # Filtrar cambios según el rol del usuario
     if request.user.is_superuser:
         # Admin ve todos los cambios pendientes
         pendientes = Roster.objects.filter(estado='pendiente')
-    elif hasattr(request.user, 'gerencia_liderada'):
-        # Líder de gerencia ve los de su gerencia
-        pendientes = Roster.objects.filter(
-            estado='pendiente',
-            personal__area__gerencia=request.user.gerencia_liderada
-        )
-    elif hasattr(request.user, 'area_liderada'):
-        # Líder de área ve los de su área
-        pendientes = Roster.objects.filter(
-            estado='pendiente',
-            personal__area=request.user.area_liderada
-        )
     else:
-        # Personal regular no ve esta vista
-        messages.error(request, 'No tiene permisos para ver cambios pendientes.')
-        return redirect('home')
+        # Verificar si es responsable de gerencia
+        gerencia = get_gerencia_responsable(request.user)
+        if gerencia:
+            # Líder de gerencia ve los de su gerencia
+            pendientes = Roster.objects.filter(
+                estado='pendiente',
+                personal__area__gerencia=gerencia
+            )
+        else:
+            # Personal regular no ve esta vista
+            messages.error(request, 'No tiene permisos para ver cambios pendientes.')
+            return redirect('home')
     
     pendientes = pendientes.select_related('personal', 'personal__area', 'modificado_por').order_by('-actualizado_en')
     
