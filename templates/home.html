@@ -110,11 +110,11 @@
                     <a href="{% url 'roster_import' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-file-upload text-primary"></i> Importar Roster
                     </a>
-                    <!-- roster_list oculto temporalmente
+                    {% comment %}
                     <a href="{% url 'roster_list' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-calendar-alt text-info"></i> Roster Lista
                     </a>
-                    -->
+                    {% endcomment %}
                     <a href="{% url 'roster_create' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-calendar-plus text-warning"></i> Agregar Registro
                     </a>
