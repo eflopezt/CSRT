@@ -86,11 +86,32 @@
 
                         <div class="mb-3">
                             <label for="password" class="form-label fw-bold">Contraseña por defecto:</label>
-                            <input type="text" class="form-control" id="password" name="password" value="Cambiar123" required>
+                            <select class="form-select" id="password" name="password" required>
+                                <option value="dni" selected>DNI del personal (recomendado)</option>
+                                <option value="custom">Personalizada</option>
+                            </select>
+                            <input type="text" class="form-control mt-2 d-none" id="password_custom" placeholder="Ingrese contraseña personalizada">
                             <small class="form-text text-muted">
-                                Esta será la contraseña temporal para los nuevos usuarios creados
+                                <strong>Recomendado:</strong> Usar el DNI como contraseña temporal
                             </small>
                         </div>
+                        
+                        <script>
+                        document.getElementById('password').addEventListener('change', function() {
+                            const customInput = document.getElementById('password_custom');
+                            if (this.value === 'custom') {
+                                customInput.classList.remove('d-none');
+                                customInput.required = true;
+                                this.name = '';
+                                customInput.name = 'password';
+                            } else {
+                                customInput.classList.add('d-none');
+                                customInput.required = false;
+                                this.name = 'password';
+                                customInput.name = '';
+                            }
+                        });
+                        </script>
 
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="solo_activos" id="solo_activos">
@@ -103,7 +124,8 @@
                             <i class="fas fa-info-circle"></i> <strong>Información:</strong>
                             <ul class="mb-0 mt-2">
                                 <li>Solo se procesan registros con <strong>tipo de documento DNI</strong></li>
-                                <li>El username será el <strong>número de DNI</strong></li>
+                                <li>El username será: <strong>Primera letra del nombre + Apellido paterno</strong> (ej: Juan Pérez → jperez)</li>
+                                <li>La contraseña por defecto es el <strong>DNI del personal</strong></li>
                                 <li>Los usuarios deben <strong>cambiar su contraseña</strong> en el primer acceso</li>
                                 <li>Si el personal es responsable de área, se agregará automáticamente al grupo correspondiente</li>
                             </ul>
@@ -134,9 +156,9 @@
                         Busca usuarios existentes cuyo <code>username</code> coincida con el DNI del personal y los vincula automáticamente.
                     </p>
 
-                    <h6 class="fw-bold mt-3">Crear Nuevos:</h6>
+                    <h6 class="fw-bold">Crear Nuevos:</h6>
                     <p class="small">
-                        Crea nuevos usuarios para el personal que no tiene usuario asignado. El username será el DNI.
+                        Crea nuevos usuarios para el personal que no tiene usuario asignado. El username será la primera letra del nombre + apellido paterno (ej: Juan Pérez → jperez). La contraseña será el DNI.
                     </p>
 
                     <div class="alert alert-warning small mt-3">
@@ -170,8 +192,8 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Nombre Completo</th>
-                                    <th>Usuario (DNI)</th>
-                                    <th>Contraseña Temporal</th>
+                                    <th>Username</th>
+                                    <th>Contraseña (DNI)</th>
                                 </tr>
                             </thead>
                             <tbody>

@@ -41,7 +41,7 @@ python manage.py sincronizar_usuarios --vincular-existentes
 # Solo crear nuevos usuarios
 python manage.py sincronizar_usuarios --crear-usuarios
 
-# Con contraseña personalizada
+# Con contraseña personalizada (por defecto es DNI)
 python manage.py sincronizar_usuarios --password-default "MiPassword123"
 
 # Solo personal activo
@@ -61,12 +61,13 @@ python manage.py sincronizar_usuarios --dry-run
 ### **Crear Usuarios Nuevos**
 - Identifica personal sin usuario asignado (que tenga DNI)
 - Crea un usuario con:
-  - **Username:** Número de DNI
+  - **Username:** Primera letra del nombre + Apellido paterno (ej: Juan Pérez López → jperez)
   - **Email:** Correo corporativo o personal del registro
-  - **Password:** Contraseña temporal configurable
+  - **Password:** El número de DNI
   - **Nombre:** Extraído del campo `apellidos_nombres`
 - Vincula automáticamente el usuario al personal
 - Si el personal es responsable de área, lo agrega al grupo correspondiente
+- Si el username ya existe, agrega un número secuencial (jperez1, jperez2, etc.)
 
 ## ⚙️ Requisitos
 
@@ -94,12 +95,20 @@ python manage.py sincronizar_usuarios --solo-activos
 
 ## 🔐 Seguridad
 
-**Contraseña por defecto:** `Cambiar123`
+**Formato de credenciales:**
+- **Username:** Primera letra del nombre + Apellido paterno (ej: Juan Pérez → `jperez`)
+- **Password:** El número de DNI del personal
 
 ⚠️ **IMPORTANTE:**
 - Los usuarios **DEBEN** cambiar su contraseña en el primer acceso
 - Considera implementar política de cambio obligatorio de contraseña
 - Notifica a los usuarios sus credenciales de manera segura
+- El DNI como contraseña inicial es fácil de recordar pero debe cambiarse
+
+**Ventajas de este formato:**
+- Username corto y fácil de recordar
+- Password es información que el personal ya conoce (su DNI)
+- Facilita la comunicación de credenciales iniciales
 
 ## 📝 Recomendaciones
 
@@ -124,9 +133,13 @@ python manage.py sincronizar_usuarios --solo-activos
 
 ## 🆘 Solución de Problemas
 
-### Error: "Ya existe usuario con ese DNI"
-**Causa:** Existe un usuario no vinculado con ese DNI
-**Solución:** Usar `--vincular-existentes` para vincularlo
+### Error: "Ya existe usuario con ese username"
+**Causa:** Ya existe un usuario con ese username generado (ej: jperez)
+**Solución:** El sistema agregará automáticamente un número (jperez1, jperez2, etc.)
+
+### Error: "Formato de nombre inválido"
+**Causa:** El registro no tiene al menos apellido y nombre
+**Solución:** Actualizar registro con formato: Apellido_Paterno Apellido_Materno Nombres
 
 ### Error: "Personal sin DNI"
 **Causa:** El registro no tiene DNI o no es tipo DNI

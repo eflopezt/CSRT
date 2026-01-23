@@ -1617,7 +1617,7 @@ def usuario_sincronizar(request):
         from django.db import transaction
         
         accion = request.POST.get('accion', 'ambas')  # vincular, crear, ambas
-        password_default = request.POST.get('password', 'Cambiar123')
+        password_default = request.POST.get('password', 'dni')
         solo_activos = request.POST.get('solo_activos') == 'on'
         
         stats = {
@@ -1670,24 +1670,46 @@ def usuario_sincronizar(request):
                 
                 for persona in personal_sin_usuario:
                     try:
-                        # Verificar si ya existe usuario
-                        if User.objects.filter(username=persona.nro_doc).exists():
+                        # Generar username: primera letra nombre + apellido paterno
+                        nombres = persona.apellidos_nombres.strip().split()
+                        if len(nombres) < 2:
+                            stats['errores'].append(f'{persona.apellidos_nombres}: Formato de nombre inválido')
+                            continue
+                        
+                        apellido_paterno = nombres[0].lower()
+                        primer_nombre = nombres[-1] if len(nombres) >= 2 else nombres[0]
+                        primera_letra = primer_nombre[0].lower()
+                        username = f'{primera_letra}{apellido_paterno}'.lower()
+                        
+                        # Si ya existe, agregar número
+                        username_base = username
+                        counter = 1
+                        while User.objects.filter(username=username).exists():
+                            username = f'{username_base}{counter}'
+                            counter += 1
+                            if counter > 99:
+                                stats['errores'].append(f'{persona.apellidos_nombres}: No se pudo generar username único')
+                                break
+                        
+                        if counter > 99:
                             continue
                         
                         # Generar email
-                        email = persona.correo_corporativo or persona.correo_personal or f'{persona.nro_doc}@temp.com'
+                        email = persona.correo_corporativo or persona.correo_personal or f'{username}@temp.com'
                         
                         # Extraer nombres
-                        nombres = persona.apellidos_nombres.split()
-                        first_name = ' '.join(nombres[:2]) if len(nombres) >= 2 else persona.apellidos_nombres
-                        last_name = ' '.join(nombres[2:]) if len(nombres) > 2 else ''
+                        first_name = ' '.join(nombres[2:]) if len(nombres) > 2 else nombres[-1]
+                        last_name = ' '.join(nombres[:2]) if len(nombres) >= 2 else nombres[0]
+                        
+                        # Contraseña: DNI o personalizada
+                        password = persona.nro_doc if password_default.lower() == 'dni' else password_default
                         
                         with transaction.atomic():
                             # Crear usuario
                             usuario = User.objects.create_user(
-                                username=persona.nro_doc,
+                                username=username,
                                 email=email,
-                                password=password_default,
+                                password=password,
                                 first_name=first_name[:30],
                                 last_name=last_name[:30],
                                 is_staff=False,
@@ -1706,8 +1728,8 @@ def usuario_sincronizar(request):
                             stats['creados'] += 1
                             stats['usuarios_creados'].append({
                                 'nombre': persona.apellidos_nombres,
-                                'usuario': persona.nro_doc,
-                                'password': password_default
+                                'usuario': username,
+                                'password': password
                             })
                     
                     except Exception as e:

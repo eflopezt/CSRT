@@ -28,8 +28,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--password-default',
             type=str,
-            default='Cambiar123',
-            help='Contraseña por defecto para nuevos usuarios (default: Cambiar123)'
+            default='dni',
+            help='Contraseña por defecto: "dni" usa el DNI, o especificar otra (default: dni)'
         )
         parser.add_argument(
             '--solo-activos',
@@ -104,8 +104,31 @@ class Command(BaseCommand):
                 continue
 
             try:
-                # Buscar usuario con username = DNI
-                usuario = User.objects.get(username=persona.nro_doc)
+                # Generar username esperado: primera letra nombre + apellido paterno
+                nombres = persona.apellidos_nombres.strip().split()
+                if len(nombres) < 2:
+                    continue
+                
+                apellido_paterno = nombres[0].lower()
+                primer_nombre = nombres[-1] if len(nombres) >= 2 else nombres[0]
+                primera_letra = primer_nombre[0].lower()
+                username_esperado = f'{primera_letra}{apellido_paterno}'.lower()
+                
+                # Buscar usuario con ese username o variaciones (username1, username2, etc.)
+                usuario = None
+                try:
+                    usuario = User.objects.get(username=username_esperado)
+                except User.DoesNotExist:
+                    # Buscar variaciones con número
+                    for i in range(1, 10):
+                        try:
+                            usuario = User.objects.get(username=f'{username_esperado}{i}')
+                            break
+                        except User.DoesNotExist:
+                            continue
+                
+                if not usuario:
+                    continue
 
                 # Verificar que el usuario no esté vinculado a otro personal
                 if hasattr(usuario, 'personal_data'):
@@ -157,31 +180,56 @@ class Command(BaseCommand):
 
         for persona in personal_sin_usuario:
             try:
-                # Verificar si ya existe un usuario con ese username
-                if User.objects.filter(username=persona.nro_doc).exists():
+                # Generar username: primera letra nombre + apellido paterno
+                nombres = persona.apellidos_nombres.strip().split()
+                if len(nombres) < 2:
                     self.stdout.write(
                         self.style.WARNING(
-                            f'  ⚠️  Ya existe usuario con username {persona.nro_doc}, pero no está vinculado. '
-                            'Use --vincular-existentes para vincularlo.'
+                            f'  ⚠️  {persona.apellidos_nombres} no tiene formato válido para generar username'
                         )
                     )
                     continue
+                
+                # Apellido paterno + Apellido materno + Nombres
+                # Asumir que primeros 2 son apellidos, resto nombres
+                apellido_paterno = nombres[0].lower()
+                primer_nombre = nombres[-1] if len(nombres) >= 2 else nombres[0]
+                primera_letra = primer_nombre[0].lower()
+                username = f'{primera_letra}{apellido_paterno}'.lower()
+                
+                # Si ya existe, agregar número
+                username_base = username
+                counter = 1
+                while User.objects.filter(username=username).exists():
+                    username = f'{username_base}{counter}'
+                    counter += 1
+                    if counter > 99:
+                        self.stdout.write(
+                            self.style.ERROR(f'  ✗ No se pudo generar username único para {persona.apellidos_nombres}')
+                        )
+                        stats['errores'] += 1
+                        break
+                
+                if counter > 99:
+                    continue
 
                 # Generar email
-                email = persona.correo_corporativo or persona.correo_personal or f'{persona.nro_doc}@temp.com'
+                email = persona.correo_corporativo or persona.correo_personal or f'{username}@temp.com'
 
                 # Extraer nombres para first_name y last_name
-                nombres_completos = persona.apellidos_nombres.split()
-                first_name = ' '.join(nombres_completos[:2]) if len(nombres_completos) >= 2 else persona.apellidos_nombres
-                last_name = ' '.join(nombres_completos[2:]) if len(nombres_completos) > 2 else ''
+                first_name = ' '.join(nombres[2:]) if len(nombres) > 2 else nombres[-1]  # Nombres
+                last_name = ' '.join(nombres[:2]) if len(nombres) >= 2 else nombres[0]  # Apellidos
+                
+                # Contraseña: DNI o personalizada
+                password = persona.nro_doc if password_default.lower() == 'dni' else password_default
 
                 if not dry_run:
                     with transaction.atomic():
                         # Crear usuario
                         usuario = User.objects.create_user(
-                            username=persona.nro_doc,
+                            username=username,
                             email=email,
-                            password=password_default,
+                            password=password,
                             first_name=first_name[:30],
                             last_name=last_name[:30],
                             is_staff=False,
@@ -200,7 +248,7 @@ class Command(BaseCommand):
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'  ✓ Creado: {persona.apellidos_nombres} → Usuario: {persona.nro_doc} | Password: {password_default}'
+                        f'  ✓ Creado: {persona.apellidos_nombres} → Usuario: {username} | Password: {password}'
                     )
                 )
                 stats['creados'] += 1
