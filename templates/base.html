@@ -82,9 +82,9 @@
                                 {% endif %}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                {% if es_responsable and gerencia_responsable %}
+                                {% if es_responsable and area_responsable %}
                                 <li><h6 class="dropdown-header">
-                                    <i class="fas fa-building"></i> {{ gerencia_responsable.nombre }}
+                                    <i class="fas fa-building"></i> {{ area_responsable.nombre }}
                                 </h6></li>
                                 <li><hr class="dropdown-divider"></li>
                                 {% endif %}
@@ -118,13 +118,13 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'gerencia_list' %}">
-                                <i class="fas fa-building"></i> Gerencias
+                            <a class="nav-link" href="{% url 'area_list' %}">
+                                <i class="fas fa-building"></i> Áreas
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'area_list' %}">
-                                <i class="fas fa-sitemap"></i> Áreas
+                            <a class="nav-link" href="{% url 'subarea_list' %}">
+                                <i class="fas fa-sitemap"></i> SubÁreas
                             </a>
                         </li>
                         <li class="nav-item">
