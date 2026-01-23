@@ -13,6 +13,25 @@
 
     <!-- Estadísticas -->
     <div class="row mb-4">
+        {% if limite_excedido %}
+        <div class="col-12">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <h5><i class="fas fa-exclamation-triangle"></i> Límite Excedido</h5>
+                <p class="mb-2">
+                    Hay <strong>{{ total_procesar }}</strong> registros de personal sin usuario, 
+                    pero la interfaz web tiene un límite de <strong>{{ limite }}</strong> usuarios por operación 
+                    para evitar timeouts.
+                </p>
+                <hr>
+                <p class="mb-0">
+                    <strong>Solución:</strong> Use el comando de terminal para sincronización masiva:
+                </p>
+                <pre class="bg-dark text-white p-2 mt-2"><code>python manage.py sincronizar_usuarios</code></pre>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+        {% endif %}
+        
         <div class="col-md-3">
             <div class="card border-primary">
                 <div class="card-body text-center">

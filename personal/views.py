@@ -1621,6 +1621,9 @@ def usuario_sincronizar(request):
         password_default = request.POST.get('password', 'dni')
         solo_activos = request.POST.get('solo_activos') == 'on'
         
+        # LÍMITE DE SEGURIDAD: Máximo 50 usuarios por operación web
+        LIMITE_WEB = 50
+        
         stats = {
             'vinculados': 0,
             'creados': 0,
@@ -1637,10 +1640,32 @@ def usuario_sincronizar(request):
         # Contar ya vinculados
         stats['ya_vinculados'] = personal_qs.filter(usuario__isnull=False).count()
         
+        # Verificar cantidad a procesar
+        personal_sin_usuario = personal_qs.filter(usuario__isnull=True, tipo_doc='DNI').exclude(nro_doc='')
+        total_procesar = personal_sin_usuario.count()
+        
+        if total_procesar > LIMITE_WEB:
+            messages.warning(
+                request, 
+                f'⚠️ Hay {total_procesar} registros para procesar. '
+                f'La interfaz web tiene un límite de {LIMITE_WEB} por operación. '
+                f'Use el comando de terminal para sincronización masiva: '
+                f'python manage.py sincronizar_usuarios'
+            )
+            return render(request, 'personal/usuario_sincronizar.html', {
+                'total_personal': Personal.objects.count(),
+                'personal_con_usuario': personal_qs.filter(usuario__isnull=False).count(),
+                'personal_sin_usuario': total_procesar,
+                'usuarios_sin_vincular': User.objects.filter(personal_data__isnull=True, is_superuser=False).count(),
+                'limite_excedido': True,
+                'total_procesar': total_procesar,
+                'limite': LIMITE_WEB,
+            })
+        
         try:
             # 1. VINCULAR USUARIOS EXISTENTES
             if accion in ['vincular', 'ambas']:
-                personal_sin_usuario = personal_qs.filter(usuario__isnull=True, tipo_doc='DNI')
+                personal_sin_usuario = personal_qs.filter(usuario__isnull=True, tipo_doc='DNI')[:LIMITE_WEB]  # Limitar cantidad
                 
                 for persona in personal_sin_usuario:
                     if not persona.nro_doc:
@@ -1667,7 +1692,7 @@ def usuario_sincronizar(request):
                 personal_sin_usuario = personal_qs.filter(
                     usuario__isnull=True,
                     tipo_doc='DNI'
-                ).exclude(nro_doc__isnull=True).exclude(nro_doc='')
+                ).exclude(nro_doc__isnull=True).exclude(nro_doc='')[:LIMITE_WEB]  # Limitar cantidad
                 
                 for persona in personal_sin_usuario:
                     try:
