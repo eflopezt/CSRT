@@ -2,6 +2,9 @@
 # exit on error
 set -o errexit
 
+# Force clean build
+echo "==> Starting build process"
+
 pip install --upgrade pip
 pip install -r requirements.txt
 
