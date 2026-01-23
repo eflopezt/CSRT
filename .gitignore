@@ -66,3 +66,4 @@ celerybeat.pid
 # Misc
 *.bak
 *.tmp
+backups/

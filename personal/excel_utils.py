@@ -3,6 +3,7 @@ Utilidades para generar archivos Excel con validaciones y múltiples hojas.
 """
 import pandas as pd
 from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles.numbers import FORMAT_TEXT
 from openpyxl.worksheet.datavalidation import DataValidation
 from io import BytesIO
 import logging
@@ -48,16 +49,28 @@ def crear_excel_con_validaciones(datos_principales, nombre_hoja_principal, catal
                 cell.font = header_font
                 cell.alignment = Alignment(horizontal='center', vertical='center')
             
-            # Ajustar ancho de columnas
+            # Ajustar ancho de columnas y aplicar formato de texto a DNI
+            columnas_texto = ['NroDoc', 'DNI', 'Responsable_DNI', 'CodigoFotocheck', 'Celular']
+            
             for column in hoja_principal.columns:
                 max_length = 0
                 column_letter = column[0].column_letter
+                column_name = column[0].value
+                
                 for cell in column:
                     try:
                         if len(str(cell.value)) > max_length:
                             max_length = len(str(cell.value))
                     except Exception:
                         pass
+                    
+                    # Aplicar formato de texto a columnas específicas (DNI, etc.)
+                    if column_name in columnas_texto and cell.row > 1:  # Skip header
+                        cell.number_format = FORMAT_TEXT
+                        # Asegurar que el valor se mantiene como string
+                        if cell.value is not None:
+                            cell.value = str(cell.value)
+                
                 adjusted_width = min(max_length + 2, 50)
                 hoja_principal.column_dimensions[column_letter].width = adjusted_width
             

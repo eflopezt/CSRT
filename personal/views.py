@@ -620,7 +620,12 @@ def area_import(request):
             archivo = request.FILES['archivo']
             
             try:
-                df = pd.read_excel(archivo, sheet_name='Gerencias')
+                # Forzar DNI como texto para preservar ceros a la izquierda
+                df = pd.read_excel(
+                    archivo, 
+                    sheet_name='Gerencias',
+                    dtype={'Responsable_DNI': str}
+                )
                 
                 # Validar columnas
                 columnas_requeridas = ['Nombre']
@@ -642,9 +647,16 @@ def area_import(request):
                         responsable = None
                         if 'Responsable_DNI' in row and pd.notna(row['Responsable_DNI']):
                             try:
-                                responsable = Personal.objects.get(nro_doc=str(row['Responsable_DNI']).strip())
+                                # Procesar DNI correctamente
+                                dni_responsable = row['Responsable_DNI']
+                                if isinstance(dni_responsable, (int, float)):
+                                    dni_responsable = str(int(dni_responsable)).strip()
+                                else:
+                                    dni_responsable = str(dni_responsable).strip()
+                                
+                                responsable = Personal.objects.get(nro_doc=dni_responsable)
                             except Personal.DoesNotExist:
-                                errores.append(f"Fila {idx + 2}: Responsable con DNI {row['Responsable_DNI']} no encontrado")
+                                errores.append(f"Fila {idx + 2}: Responsable con DNI {dni_responsable} no encontrado")
                         
                         # Determinar si está activa
                         activa = True
@@ -838,7 +850,12 @@ def personal_import(request):
             archivo = request.FILES['archivo']
             
             try:
-                df = pd.read_excel(archivo, sheet_name='Personal')
+                # Leer Excel forzando NroDoc como texto para preservar ceros a la izquierda
+                df = pd.read_excel(
+                    archivo, 
+                    sheet_name='Personal',
+                    dtype={'NroDoc': str, 'CodigoFotocheck': str, 'Celular': str}
+                )
                 
                 columnas_requeridas = ['NroDoc', 'ApellidosNombres']
                 if not all(col in df.columns for col in columnas_requeridas):
@@ -851,11 +868,21 @@ def personal_import(request):
                 
                 for idx, row in df.iterrows():
                     try:
-                        nro_doc = str(row['NroDoc']).strip()
-                        apellidos_nombres = str(row['ApellidosNombres']).strip()
+                        # Procesar DNI - asegurar que se mantienen ceros a la izquierda
+                        nro_doc_raw = row['NroDoc']
+                        if pd.isna(nro_doc_raw):
+                            continue
+                        
+                        # Si es número, convertir a string sin notación científica
+                        if isinstance(nro_doc_raw, (int, float)):
+                            nro_doc = str(int(nro_doc_raw)).strip()
+                        else:
+                            nro_doc = str(nro_doc_raw).strip()
                         
                         if not nro_doc or nro_doc == 'nan':
                             continue
+                        
+                        apellidos_nombres = str(row['ApellidosNombres']).strip()
                         
                         # Buscar área
                         subarea = None
@@ -995,7 +1022,12 @@ def roster_import(request):
             archivo = request.FILES['archivo']
             
             try:
-                df = pd.read_excel(archivo, sheet_name='Roster')
+                # Forzar DNI como texto para preservar ceros a la izquierda
+                df = pd.read_excel(
+                    archivo, 
+                    sheet_name='Roster',
+                    dtype={'DNI': str}
+                )
                 
                 columnas_requeridas = ['DNI']
                 if not all(col in df.columns for col in columnas_requeridas):
@@ -1015,7 +1047,16 @@ def roster_import(request):
                 
                 for idx, row in df.iterrows():
                     try:
-                        nro_doc = str(row['DNI']).strip()
+                        # Procesar DNI correctamente para preservar ceros
+                        dni_raw = row['DNI']
+                        if pd.isna(dni_raw):
+                            continue
+                        
+                        if isinstance(dni_raw, (int, float)):
+                            nro_doc = str(int(dni_raw)).strip()
+                        else:
+                            nro_doc = str(dni_raw).strip()
+                        
                         if not nro_doc or nro_doc == 'nan':
                             continue
                         
