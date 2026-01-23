@@ -1363,7 +1363,7 @@ def dashboard_aprobaciones(request):
         'pendientes': pendientes,
         'stats': stats,
         'area': area,
-        'subareas': subareas,
+        'subareas': areas,
         'buscar': buscar,
         'area_filtro': subarea_filtro,
         'codigo_filtro': codigo_filtro,
