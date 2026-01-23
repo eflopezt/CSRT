@@ -229,9 +229,9 @@ def personal_list(request):
     
     return render(request, 'personal/personal_list.html', {
         'page_obj': page_obj,
-        'subareas': subareas,
+        'areas': subareas,
         'estado': estado,
-        'subarea_id': subarea_id,
+        'area_id': subarea_id,
         'buscar': buscar
     })
 
@@ -536,8 +536,8 @@ def roster_matricial(request):
         'mes_nombre': dict(meses)[mes],
         'meses': meses,
         'anios': anios,
-        'subareas': areas,
-        'subarea_id': subarea_id,
+        'areas': areas,
+        'area_id': subarea_id,
         'buscar': buscar,
         'page_obj': tabla_datos_paginada if paginator else None,
         'paginator': paginator,

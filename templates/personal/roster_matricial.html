@@ -369,8 +369,8 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">SubÁrea:</label>
-                    <select name="subarea" class="form-select">
-                        <option value="">Todas las subsubáreas</option>
+                    <select name="area" class="form-select">
+                        <option value="">Todas las SubÁreas</option>
                         {% for a in areas %}
                             <option value="{{ a.id }}" {% if area_id == a.id|stringformat:"s" %}selected{% endif %}>
                                 {{ a.área.nombre }} - {{ a.nombre }}
