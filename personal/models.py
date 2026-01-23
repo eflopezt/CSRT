@@ -596,16 +596,11 @@ class Roster(models.Model):
         if hasattr(usuario, 'personal_data') and usuario.personal_data == self.personal:
             return True, ""
         
-        # Verificar si es líder de la gerencia o área
-        if hasattr(usuario, 'gerencia_liderada'):
-            # Es líder de gerencia
-            if self.personal.area and self.personal.area.gerencia == usuario.gerencia_liderada:
-                return True, ""
-        
-        if hasattr(usuario, 'area_liderada'):
-            # Es líder de área
-            if self.personal.area == usuario.area_liderada:
-                return True, ""
+        # Verificar si es responsable del área del personal
+        from .permissions import get_area_responsable
+        area = get_area_responsable(usuario)
+        if area and self.personal.subarea and self.personal.subarea.area == area:
+            return True, ""
         
         return False, "No tiene permisos para editar este registro"
     
