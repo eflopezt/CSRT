@@ -391,8 +391,8 @@ def roster_matricial(request):
     # Obtener personal activo con filtros según usuario
     personal_qs = filtrar_personal(request.user).filter(estado='Activo').select_related('subarea', 'subarea__area')
     
-    if area_id:
-        personal_qs = personal_qs.filter(area_id=area_id)
+    if subarea_id:
+        personal_qs = personal_qs.filter(subarea_id=subarea_id)
     
     if buscar:
         personal_qs = personal_qs.filter(
