@@ -211,8 +211,8 @@ def personal_list(request):
     
     if estado:
         personal = personal.filter(estado=estado)
-    if area_id:
-        personal = personal.filter(area_id=area_id)
+    if subarea_id:
+        personal = personal.filter(subarea_id=subarea_id)
     if buscar:
         personal = personal.filter(
             Q(apellidos_nombres__icontains=buscar) |
@@ -225,13 +225,13 @@ def personal_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    areas = SubArea.objects.filter(activa=True).select_related('area')
+    subareas = SubArea.objects.filter(activa=True).select_related('area')
     
     return render(request, 'personal/personal_list.html', {
         'page_obj': page_obj,
         'subareas': subareas,
         'estado': estado,
-        'area_id': area_id,
+        'subarea_id': subarea_id,
         'buscar': buscar
     })
 
