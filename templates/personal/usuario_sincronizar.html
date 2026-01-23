@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Sincronizar Usuarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-sync-alt"></i> Sincronizar Usuarios con Personal</h2>
+        <a href="{% url 'usuario_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Usuarios
+        </a>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                    <h3 class="mb-0">{{ total_personal }}</h3>
+                    <p class="text-muted mb-0">Total Personal</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-check fa-2x text-success mb-2"></i>
+                    <h3 class="mb-0">{{ personal_con_usuario }}</h3>
+                    <p class="text-muted mb-0">Con Usuario Vinculado</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-times fa-2x text-warning mb-2"></i>
+                    <h3 class="mb-0">{{ personal_sin_usuario }}</h3>
+                    <p class="text-muted mb-0">Sin Usuario (con DNI)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-slash fa-2x text-info mb-2"></i>
+                    <h3 class="mb-0">{{ usuarios_sin_vincular }}</h3>
+                    <p class="text-muted mb-0">Usuarios Sin Vincular</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de sincronización -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> Opciones de Sincronización</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" onsubmit="return confirm('¿Está seguro de realizar la sincronización? Esta acción creará usuarios y/o vinculará existentes.');">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Acción a realizar:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="accion" id="accion_ambas" value="ambas" checked>
+                                <label class="form-check-label" for="accion_ambas">
+                                    <strong>Ambas</strong> - Vincular usuarios existentes Y crear faltantes
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="accion" id="accion_vincular" value="vincular">
+                                <label class="form-check-label" for="accion_vincular">
+                                    <strong>Solo Vincular</strong> - Vincular usuarios existentes con personal (por DNI)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="accion" id="accion_crear" value="crear">
+                                <label class="form-check-label" for="accion_crear">
+                                    <strong>Solo Crear</strong> - Crear nuevos usuarios para personal sin usuario
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-bold">Contraseña por defecto:</label>
+                            <input type="text" class="form-control" id="password" name="password" value="Cambiar123" required>
+                            <small class="form-text text-muted">
+                                Esta será la contraseña temporal para los nuevos usuarios creados
+                            </small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="solo_activos" id="solo_activos">
+                            <label class="form-check-label" for="solo_activos">
+                                Procesar solo personal con estado <strong>Activo</strong>
+                            </label>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> <strong>Información:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Solo se procesan registros con <strong>tipo de documento DNI</strong></li>
+                                <li>El username será el <strong>número de DNI</strong></li>
+                                <li>Los usuarios deben <strong>cambiar su contraseña</strong> en el primer acceso</li>
+                                <li>Si el personal es responsable de área, se agregará automáticamente al grupo correspondiente</li>
+                            </ul>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-sync-alt"></i> Sincronizar Ahora
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de ayuda -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Ayuda</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">¿Qué hace la sincronización?</h6>
+                    <p class="small">
+                        Esta herramienta automatiza la creación y vinculación de usuarios del sistema con los registros de personal.
+                    </p>
+
+                    <h6 class="fw-bold mt-3">Vincular Existentes:</h6>
+                    <p class="small">
+                        Busca usuarios existentes cuyo <code>username</code> coincida con el DNI del personal y los vincula automáticamente.
+                    </p>
+
+                    <h6 class="fw-bold mt-3">Crear Nuevos:</h6>
+                    <p class="small">
+                        Crea nuevos usuarios para el personal que no tiene usuario asignado. El username será el DNI.
+                    </p>
+
+                    <div class="alert alert-warning small mt-3">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Importante:</strong>
+                        Esta operación no es reversible automáticamente. Los usuarios creados permanecerán en el sistema.
+                    </div>
+
+                    <h6 class="fw-bold mt-3">Comando de Terminal:</h6>
+                    <pre class="bg-dark text-white p-2 small"><code>python manage.py sincronizar_usuarios --help</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de usuarios recién creados -->
+    {% if usuarios_creados %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Usuarios Creados Exitosamente</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        <strong>IMPORTANTE:</strong> Guarde esta información. Estos son los usuarios y contraseñas temporales que fueron creados:
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Nombre Completo</th>
+                                    <th>Usuario (DNI)</th>
+                                    <th>Contraseña Temporal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usuario in usuarios_creados %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ usuario.nombre }}</td>
+                                    <td><code>{{ usuario.usuario }}</code></td>
+                                    <td><code class="text-danger">{{ usuario.password }}</code></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button onclick="exportarTabla()" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i> Exportar a Excel
+                    </button>
+                    <button onclick="copiarTabla()" class="btn btn-info">
+                        <i class="fas fa-copy"></i> Copiar al Portapapeles
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function copiarTabla() {
+        let texto = "Nombre\tUsuario\tContraseña\n";
+        {% for usuario in usuarios_creados %}
+        texto += "{{ usuario.nombre }}\t{{ usuario.usuario }}\t{{ usuario.password }}\n";
+        {% endfor %}
+        
+        navigator.clipboard.writeText(texto).then(() => {
+            alert('¡Información copiada al portapapeles!');
+        });
+    }
+
+    function exportarTabla() {
+        let csv = "Nombre,Usuario,Contraseña\n";
+        {% for usuario in usuarios_creados %}
+        csv += '"{{ usuario.nombre }}","{{ usuario.usuario }}","{{ usuario.password }}"\n';
+        {% endfor %}
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'usuarios_creados_' + new Date().toISOString().split('T')[0] + '.csv';
+        a.click();
+    }
+    </script>
+    {% endif %}
+</div>
+{% endblock %}

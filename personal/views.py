@@ -1603,3 +1603,153 @@ def usuario_desvincular(request, user_id):
         messages.warning(request, 'El usuario no estaba vinculado')
     
     return redirect('usuario_list')
+
+
+@login_required
+def usuario_sincronizar(request):
+    """Vista para sincronizar usuarios automáticamente."""
+    if not request.user.is_superuser:
+        messages.error(request, 'No tiene permisos para esta acción')
+        return redirect('home')
+    
+    if request.method == 'POST':
+        from django.contrib.auth.models import User, Group
+        from django.db import transaction
+        
+        accion = request.POST.get('accion', 'ambas')  # vincular, crear, ambas
+        password_default = request.POST.get('password', 'Cambiar123')
+        solo_activos = request.POST.get('solo_activos') == 'on'
+        
+        stats = {
+            'vinculados': 0,
+            'creados': 0,
+            'ya_vinculados': 0,
+            'errores': [],
+            'usuarios_creados': []
+        }
+        
+        # Filtrar personal
+        personal_qs = Personal.objects.select_related('usuario', 'subarea__area')
+        if solo_activos:
+            personal_qs = personal_qs.filter(estado='Activo')
+        
+        # Contar ya vinculados
+        stats['ya_vinculados'] = personal_qs.filter(usuario__isnull=False).count()
+        
+        try:
+            # 1. VINCULAR USUARIOS EXISTENTES
+            if accion in ['vincular', 'ambas']:
+                personal_sin_usuario = personal_qs.filter(usuario__isnull=True, tipo_doc='DNI')
+                
+                for persona in personal_sin_usuario:
+                    if not persona.nro_doc:
+                        continue
+                    
+                    try:
+                        usuario = User.objects.get(username=persona.nro_doc)
+                        
+                        # Verificar que no esté vinculado a otro
+                        if hasattr(usuario, 'personal_data'):
+                            continue
+                        
+                        persona.usuario = usuario
+                        persona.save(update_fields=['usuario'])
+                        stats['vinculados'] += 1
+                        
+                    except User.DoesNotExist:
+                        pass
+                    except Exception as e:
+                        stats['errores'].append(f'{persona.apellidos_nombres}: {str(e)}')
+            
+            # 2. CREAR USUARIOS NUEVOS
+            if accion in ['crear', 'ambas']:
+                personal_sin_usuario = personal_qs.filter(
+                    usuario__isnull=True,
+                    tipo_doc='DNI'
+                ).exclude(nro_doc__isnull=True).exclude(nro_doc='')
+                
+                for persona in personal_sin_usuario:
+                    try:
+                        # Verificar si ya existe usuario
+                        if User.objects.filter(username=persona.nro_doc).exists():
+                            continue
+                        
+                        # Generar email
+                        email = persona.correo_corporativo or persona.correo_personal or f'{persona.nro_doc}@temp.com'
+                        
+                        # Extraer nombres
+                        nombres = persona.apellidos_nombres.split()
+                        first_name = ' '.join(nombres[:2]) if len(nombres) >= 2 else persona.apellidos_nombres
+                        last_name = ' '.join(nombres[2:]) if len(nombres) > 2 else ''
+                        
+                        with transaction.atomic():
+                            # Crear usuario
+                            usuario = User.objects.create_user(
+                                username=persona.nro_doc,
+                                email=email,
+                                password=password_default,
+                                first_name=first_name[:30],
+                                last_name=last_name[:30],
+                                is_staff=False,
+                                is_active=True
+                            )
+                            
+                            # Vincular
+                            persona.usuario = usuario
+                            persona.save(update_fields=['usuario'])
+                            
+                            # Si es responsable, agregar a grupo
+                            if hasattr(persona, 'area_responsable'):
+                                grupo, _ = Group.objects.get_or_create(name='Responsable de Área')
+                                usuario.groups.add(grupo)
+                            
+                            stats['creados'] += 1
+                            stats['usuarios_creados'].append({
+                                'nombre': persona.apellidos_nombres,
+                                'usuario': persona.nro_doc,
+                                'password': password_default
+                            })
+                    
+                    except Exception as e:
+                        stats['errores'].append(f'{persona.apellidos_nombres}: {str(e)}')
+            
+            # Mostrar resultados
+            if stats['vinculados'] > 0:
+                messages.success(request, f'✓ {stats["vinculados"]} usuarios vinculados exitosamente')
+            
+            if stats['creados'] > 0:
+                messages.success(request, f'✓ {stats["creados"]} usuarios creados exitosamente')
+                # Guardar lista de usuarios creados en sesión para mostrarlos
+                request.session['usuarios_creados'] = stats['usuarios_creados']
+            
+            if stats['errores']:
+                for error in stats['errores'][:5]:
+                    messages.warning(request, f'⚠ {error}')
+            
+            if stats['vinculados'] == 0 and stats['creados'] == 0:
+                messages.info(request, 'No se encontraron usuarios para sincronizar')
+            
+            return redirect('usuario_sincronizar')
+        
+        except Exception as e:
+            messages.error(request, f'Error en sincronización: {str(e)}')
+            return redirect('usuario_sincronizar')
+    
+    # GET - Mostrar formulario y estadísticas
+    total_personal = Personal.objects.count()
+    personal_con_usuario = Personal.objects.filter(usuario__isnull=False).count()
+    personal_sin_usuario = Personal.objects.filter(usuario__isnull=True, tipo_doc='DNI').exclude(nro_doc='').count()
+    usuarios_sin_vincular = User.objects.filter(personal_data__isnull=True, is_superuser=False).count()
+    
+    # Obtener lista de usuarios creados de la sesión
+    usuarios_creados = request.session.pop('usuarios_creados', [])
+    
+    context = {
+        'total_personal': total_personal,
+        'personal_con_usuario': personal_con_usuario,
+        'personal_sin_usuario': personal_sin_usuario,
+        'usuarios_sin_vincular': usuarios_sin_vincular,
+        'usuarios_creados': usuarios_creados,
+    }
+    
+    return render(request, 'personal/usuario_sincronizar.html', context)

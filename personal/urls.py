@@ -58,4 +58,5 @@ urlpatterns = [
     path('usuarios/vincular/', views.usuario_vincular, name='usuario_vincular'),
     path('usuarios/crear-vincular/', views.usuario_crear_y_vincular, name='usuario_crear_y_vincular'),
     path('usuarios/desvincular/<int:user_id>/', views.usuario_desvincular, name='usuario_desvincular'),
+    path('usuarios/sincronizar/', views.usuario_sincronizar, name='usuario_sincronizar'),
 ]
