@@ -1612,9 +1612,10 @@ def usuario_sincronizar(request):
         messages.error(request, 'No tiene permisos para esta acción')
         return redirect('home')
     
+    from django.contrib.auth.models import User, Group
+    from django.db import transaction
+    
     if request.method == 'POST':
-        from django.contrib.auth.models import User, Group
-        from django.db import transaction
         
         accion = request.POST.get('accion', 'ambas')  # vincular, crear, ambas
         password_default = request.POST.get('password', 'dni')
