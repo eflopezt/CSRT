@@ -78,7 +78,7 @@ def area_list(request):
     """Lista de areas."""
     # Aplicar filtros según usuario
     areas = filtrar_areas(request.user).annotate(
-        total_areas=Count('areas'),
+        total_subareas=Count('subareas'),
     ).order_by('nombre')
     
     # Filtros
@@ -90,11 +90,11 @@ def area_list(request):
         )
     
     context = {
-        'gerencias': gerencias,
+        'areas': areas,
         'buscar': buscar
     }
     context.update(get_context_usuario(request.user))
-    return render(request, 'personal/gerencia_list.html', context)
+    return render(request, 'personal/area_list.html', context)
 
 
 @login_required
@@ -109,7 +109,7 @@ def area_create(request):
     else:
         form = AreaForm()
     
-    return render(request, 'personal/gerencia_form.html', {'form': form})
+    return render(request, 'personal/area_form.html', {'form': form})
 
 
 @login_required
@@ -126,7 +126,7 @@ def area_update(request, pk):
     else:
         form = AreaForm(instance=area)
     
-    return render(request, 'personal/gerencia_form.html', {
+    return render(request, 'personal/area_form.html', {
         'form': form,
         'area': area
     })
@@ -140,7 +140,7 @@ def subarea_list(request):
     # Aplicar filtros según usuario
     subareas = filtrar_subareas(request.user).select_related('area').annotate(
         total_personal=Count('personal_asignado')
-    ).order_by('gerencia__nombre', 'nombre')
+    ).order_by('area__nombre', 'nombre')
     
     # Filtros
     area_id = request.GET.get('area', '')
@@ -153,9 +153,9 @@ def subarea_list(request):
     
     areas = Area.objects.filter(activa=True)
     
-    return render(request, 'personal/area_list.html', {
+    return render(request, 'personal/subarea_list.html', {
         'subareas': subareas,
-        'gerencias': gerencias,
+        'areas': areas,
         'buscar': buscar,
         'area_id': area_id
     })
@@ -491,7 +491,7 @@ def roster_matricial(request):
         tabla_datos.append(fila)
     
     # Obtener todas las áreas para el filtro
-    areas = SubArea.objects.filter(activa=True).select_related('area').order_by('gerencia__nombre', 'nombre')
+    areas = SubArea.objects.filter(activa=True).select_related('area').order_by('area__nombre', 'nombre')
     
     # Aplicar paginación
     if per_page_num is not None:
