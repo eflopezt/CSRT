@@ -34,9 +34,9 @@ class SubAreaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['area', 'activa']
-    search_fields = ['nombre', 'gerencia__nombre']
-    ordering_fields = ['nombre', 'gerencia__nombre', 'creado_en']
-    ordering = ['gerencia__nombre', 'nombre']
+    search_fields = ['nombre', 'area__nombre']
+    ordering_fields = ['nombre', 'area__nombre', 'creado_en']
+    ordering = ['area__nombre', 'nombre']
 
 
 class PersonalViewSet(viewsets.ModelViewSet):
@@ -75,11 +75,11 @@ class PersonalViewSet(viewsets.ModelViewSet):
 
 class RosterViewSet(viewsets.ModelViewSet):
     """ViewSet para Roster."""
-    queryset = Roster.objects.select_related('personal', 'personal__area').all()
+    queryset = Roster.objects.select_related('personal', 'personal__subarea__area').all()
     serializer_class = RosterSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['personal', 'fecha', 'personal__area']
+    filterset_fields = ['personal', 'fecha', 'personal__subarea__area']
     search_fields = ['personal__apellidos_nombres', 'personal__nro_doc', 'codigo']
     ordering_fields = ['fecha', 'personal__apellidos_nombres']
     ordering = ['-fecha', 'personal__apellidos_nombres']

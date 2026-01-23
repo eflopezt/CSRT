@@ -255,7 +255,7 @@ def operacion_compleja_ejemplo(request):
                     nombre="Nueva Área",
                     usuario=request.user
                 )
-                logger.info(f"Área creada: {gerencia.nombre}")
+                logger.info(f"Área creada: {area.nombre}")
                 
                 # Crear personal
                 personal_data = {

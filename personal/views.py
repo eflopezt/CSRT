@@ -316,7 +316,7 @@ def personal_detail(request, pk):
 @login_required
 def roster_list(request):
     """Lista de registros de roster."""
-    rosters = Roster.objects.select_related('personal', 'personal__area').all()
+    rosters = Roster.objects.select_related('personal', 'personal__subarea__area').all()
     
     # Filtros
     buscar = request.GET.get('buscar', '')
@@ -1284,7 +1284,7 @@ def dashboard_aprobaciones(request):
         )
     
     if area_filtro:
-        pendientes_qs = pendientes_qs.filter(personal__area_id=area_filtro)
+        pendientes_qs = pendientes_qs.filter(personal__subarea__area_id=area_filtro)
     
     if codigo_filtro:
         pendientes_qs = pendientes_qs.filter(codigo=codigo_filtro)
@@ -1296,7 +1296,7 @@ def dashboard_aprobaciones(request):
         pendientes_qs = pendientes_qs.filter(fecha__lte=fecha_hasta)
     
     pendientes = pendientes_qs.select_related(
-        'personal', 'personal__area', 'modificado_por'
+        'personal', 'personal__subarea__area', 'modificado_por'
     ).order_by('-actualizado_en')
     
     # Estadísticas

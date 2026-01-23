@@ -58,7 +58,7 @@ class AreaService:
         )
         
         logger.info(f"Gerencia '{nombre}' creada exitosamente (ID: {area.id})")
-        return gerencia
+        return area
     
     @staticmethod
     @transaction.atomic

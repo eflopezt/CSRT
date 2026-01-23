@@ -127,7 +127,7 @@ def crear_plantilla_personal(personal_queryset=None):
                 'CodigoFotocheck': p.codigo_fotocheck,
                 'Cargo': p.cargo,
                 'TipoTrabajador': p.tipo_trab,
-                'SubArea': p.subarea.nombre if p.area else '',
+                'SubArea': p.subarea.nombre if p.subarea else '',
                 'Estado': p.estado,
                 'FechaAlta': p.fecha_alta.strftime('%Y-%m-%d') if p.fecha_alta else '',
                 'FechaCese': p.fecha_cese.strftime('%Y-%m-%d') if p.fecha_cese else '',
@@ -316,7 +316,7 @@ def crear_plantilla_roster(mes, anio, personal_queryset, rosters_queryset=None):
         fila = {
             'DNI': persona.nro_doc,
             'ApellidosNombres': persona.apellidos_nombres,
-            'SubArea': persona.subarea.nombre if persona.area else '',
+            'SubArea': persona.subarea.nombre if persona.subarea else '',
             'DiasLibresCorte2025': float(persona.dias_libres_corte_2025),
         }
         
