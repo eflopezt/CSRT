@@ -557,7 +557,7 @@ def roster_create(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Registro de roster creado exitosamente.')
-            return redirect('roster_list')
+            return redirect('roster_matricial')
     else:
         form = RosterForm()
     
@@ -574,7 +574,7 @@ def roster_update(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, 'Registro de roster actualizado exitosamente.')
-            return redirect('roster_list')
+            return redirect('roster_matricial')
     else:
         form = RosterForm(instance=roster)
     
