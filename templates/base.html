@@ -137,11 +137,13 @@
                                 <i class="fas fa-table"></i> Roster Matricial
                             </a>
                         </li>
+                        <!-- roster_list oculto temporalmente
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'roster_list' %}">
                                 <i class="fas fa-list"></i> Roster Lista
                             </a>
                         </li>
+                        -->
                         {% if user.is_superuser or es_responsable %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard_aprobaciones' %}">
