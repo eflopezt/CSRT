@@ -146,7 +146,7 @@
             </div>
             <div class="col-md-2">
                 <select name="subarea" class="form-select form-select-sm">
-                    <option value="">Todas las subsubáreas</option>
+                    <option value="">Todas las SubÁreas</option>
                     {% for a in areas %}
                     <option value="{{ a.id }}" {% if area_filtro == a.id|stringformat:"s" %}selected{% endif %}>
                         {{ a.nombre }}
