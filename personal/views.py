@@ -1324,8 +1324,8 @@ def dashboard_aprobaciones(request):
             Q(personal__apellidos_nombres__icontains=buscar)
         )
     
-    if area_filtro:
-        pendientes_qs = pendientes_qs.filter(personal__subarea__area_id=area_filtro)
+    if subarea_filtro:
+        pendientes_qs = pendientes_qs.filter(personal__subarea__area_id=subarea_filtro)
     
     if codigo_filtro:
         pendientes_qs = pendientes_qs.filter(codigo=codigo_filtro)
@@ -1365,7 +1365,7 @@ def dashboard_aprobaciones(request):
         'area': area,
         'subareas': subareas,
         'buscar': buscar,
-        'area_filtro': area_filtro,
+        'area_filtro': subarea_filtro,
         'codigo_filtro': codigo_filtro,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
