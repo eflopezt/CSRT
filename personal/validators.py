@@ -269,8 +269,6 @@ class AreaValidator:
         if not responsable:
             return True
         
-        from .models import Gerencia
-        
         query = Area.objects.filter(responsable=responsable)
         
         if area_id:

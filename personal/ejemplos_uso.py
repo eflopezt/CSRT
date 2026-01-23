@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 import logging
 
 # Importar servicios
-from personal.services import GerenciaService, RosterService, PersonalService
+from personal.services import AreaService, RosterService, PersonalService
 
 # Importar validadores
 from personal.validators import PersonalValidator, RosterValidator, validar_archivo_excel
@@ -93,7 +93,7 @@ def importar_gerencias_mejorado(request):
         validar_archivo_excel(archivo)
         
         # Usar el servicio (maneja transacciones)
-        resultado = GerenciaService.importar_desde_excel(
+        resultado = AreaService.importar_desde_excel(
             archivo=archivo,
             usuario=request.user
         )

@@ -3,48 +3,48 @@ Tests para modelos del módulo personal.
 """
 import pytest
 from django.contrib.auth.models import User
-from personal.models import Gerencia, Area, Personal, Roster
+from personal.models import Area, SubArea, Personal, Roster
 from datetime import date
 from decimal import Decimal
 
 
 @pytest.mark.django_db
-class TestGerencia:
-    def test_crear_gerencia(self):
-        gerencia = Gerencia.objects.create(
-            nombre='GERENCIA DE PRUEBA',
+class TestArea:
+    def test_crear_area(self):
+        area = Area.objects.create(
+            nombre='AREA DE PRUEBA',
             descripcion='Descripción de prueba'
         )
-        assert gerencia.nombre == 'GERENCIA DE PRUEBA'
-        assert gerencia.activa is True
-        assert str(gerencia) == 'GERENCIA DE PRUEBA'
+        assert area.nombre == 'AREA DE PRUEBA'
+        assert area.activa is True
+        assert str(area) == 'AREA DE PRUEBA'
 
 
 @pytest.mark.django_db
-class TestArea:
-    def test_crear_area(self):
-        gerencia = Gerencia.objects.create(nombre='GERENCIA TEST')
-        area = Area.objects.create(
-            nombre='ÁREA TEST',
-            gerencia=gerencia
+class TestSubArea:
+    def test_crear_subarea(self):
+        area = Area.objects.create(nombre='AREA TEST')
+        subarea = SubArea.objects.create(
+            nombre='SUBAREA TEST',
+            area=area
         )
-        assert area.nombre == 'ÁREA TEST'
-        assert area.gerencia == gerencia
-        assert str(area) == 'GERENCIA TEST - ÁREA TEST'
+        assert subarea.nombre == 'SUBAREA TEST'
+        assert subarea.area == area
+        assert str(subarea) == 'AREA TEST - SUBAREA TEST'
 
 
 @pytest.mark.django_db
 class TestPersonal:
     def test_crear_personal(self):
-        gerencia = Gerencia.objects.create(nombre='GERENCIA TEST')
-        area = Area.objects.create(nombre='ÁREA TEST', gerencia=gerencia)
+        area = Area.objects.create(nombre='AREA TEST')
+        subarea = SubArea.objects.create(nombre='SUBAREA TEST', area=area)
         
         personal = Personal.objects.create(
             nro_doc='12345678',
             apellidos_nombres='TEST USUARIO',
             cargo='CARGO TEST',
             tipo_trab='Empleado',
-            area=area,
+            subarea=subarea,
             estado='Activo'
         )
         
@@ -56,23 +56,22 @@ class TestPersonal:
 @pytest.mark.django_db
 class TestRoster:
     def test_crear_roster(self):
-        gerencia = Gerencia.objects.create(nombre='GERENCIA TEST')
-        area = Area.objects.create(nombre='ÁREA TEST', gerencia=gerencia)
+        area = Area.objects.create(nombre='AREA TEST')
+        subarea = SubArea.objects.create(nombre='SUBAREA TEST', area=area)
         personal = Personal.objects.create(
             nro_doc='12345678',
             apellidos_nombres='TEST USUARIO',
             cargo='CARGO TEST',
             tipo_trab='Empleado',
-            area=area
+            subarea=subarea
         )
         
         roster = Roster.objects.create(
             personal=personal,
             fecha=date.today(),
-            codigo='D',
-            dias_libres_ganados=Decimal('2.5')
+            codigo='D'
         )
         
         assert roster.personal == personal
-        assert roster.dias_libres_ganados == Decimal('2.5')
         assert roster.codigo == 'D'
+        assert roster.estado == 'aprobado'  # Default
