@@ -60,7 +60,7 @@
                     {% for subarea in subareas %}
                     <tr>
                         <td><strong>{{ subarea.nombre }}</strong></td>
-                        <td>{{ subarea.área.nombre }}</td>
+                        <td>{{ subarea.area.nombre }}</td>
                         <td><span class="badge bg-info">{{ subarea.total_personal }}</span></td>
                         <td>
                             {% if subarea.activa %}
@@ -70,9 +70,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'subarea_update' area.pk %}" class="btn btn-sm btn-warning">
+                            {% if user.is_superuser %}
+                            <a href="{% url 'subarea_update' subarea.pk %}" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i>
                             </a>
+                            {% else %}
+                            <span class="text-muted">Solo lectura</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
