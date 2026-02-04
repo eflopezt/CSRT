@@ -116,7 +116,10 @@ def area_create(request):
     else:
         form = AreaForm()
     
-    context = {'form': form}
+    context = {
+        'form': form,
+        'area': None  # Para el template que verifica si está editando
+    }
     context.update(get_context_usuario(request.user))
     return render(request, 'personal/area_form.html', context)
 
@@ -191,31 +194,34 @@ def subarea_create(request):
     else:
         form = SubAreaForm()
     
-    context = {'form': form}
+    context = {
+        'form': form,
+        'subarea': None  # Para el template que verifica si está editando
+    }
     context.update(get_context_usuario(request.user))
-    return render(request, 'personal/area_form.html', context)
+    return render(request, 'personal/subarea_form.html', context)
 
 
 @login_required
 def subarea_update(request, pk):
     """Actualizar SubÁrea."""
-    area = get_object_or_404(SubArea, pk=pk)
+    subarea = get_object_or_404(SubArea, pk=pk)
     
     if request.method == 'POST':
-        form = SubAreaForm(request.POST, instance=area)
+        form = SubAreaForm(request.POST, instance=subarea)
         if form.is_valid():
             form.save()
             messages.success(request, 'SubÁrea actualizada exitosamente.')
             return redirect('subarea_list')
     else:
-        form = SubAreaForm(instance=area)
+        form = SubAreaForm(instance=subarea)
     
     context = {
         'form': form,
-        'area': area
+        'subarea': subarea
     }
     context.update(get_context_usuario(request.user))
-    return render(request, 'personal/area_form.html', context)
+    return render(request, 'personal/subarea_form.html', context)
 
 
 # ================== PERSONAL ==================
@@ -270,7 +276,12 @@ def personal_create(request):
     else:
         form = PersonalForm()
     
-    return render(request, 'personal/personal_form.html', {'form': form})
+    context = {
+        'form': form,
+        'personal': None  # Para el template que verifica si está editando
+    }
+    context.update(get_context_usuario(request.user))
+    return render(request, 'personal/personal_form.html', context)
 
 
 @login_required
@@ -289,13 +300,15 @@ def personal_update(request, pk):
         if form.is_valid():
             # Si es responsable, validar que el área pertenezca a su gerencia
             if es_responsable_area(request.user) and not request.user.is_superuser:
-                nueva_subarea = form.cleaned_data.get('area')
-                if nueva_area and nueva_area not in filtrar_subareas(request.user):
-                    messages.error(request, 'No puedes asignar personal a áreas fuera de tu area.')
-                    return render(request, 'personal/personal_form.html', {
+                nueva_subarea = form.cleaned_data.get('subarea')
+                if nueva_subarea and nueva_subarea not in filtrar_subareas(request.user):
+                    messages.error(request, 'No puedes asignar personal a subáreas fuera de tu área.')
+                    context = {
                         'form': form,
                         'personal': personal
-                    })
+                    }
+                    context.update(get_context_usuario(request.user))
+                    return render(request, 'personal/personal_form.html', context)
             
             form.save()
             messages.success(request, 'Personal actualizado exitosamente.')
