@@ -51,7 +51,7 @@
                     <tr>
                         <td><strong>{{ área.nombre }}</strong></td>
                         <td>{{ área.responsable|default:"-" }}</td>
-                        <td><span class="badge bg-info">{{ área.total_areas }}</span></td>
+                        <td><span class="badge bg-info">{{ área.total_subareas }}</span></td>
                         <td>
                             {% if área.activa %}
                                 <span class="badge bg-success">Activa</span>
@@ -60,9 +60,13 @@
                             {% endif %}
                         </td>
                         <td>
+                            {% if user.is_superuser %}
                             <a href="{% url 'area_update' área.pk %}" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i>
                             </a>
+                            {% else %}
+                            <span class="text-muted">Solo lectura</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

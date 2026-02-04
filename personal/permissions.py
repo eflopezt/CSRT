@@ -26,14 +26,9 @@ def get_area_responsable(user):
 
 def filtrar_areas(user):
     """Filtra áreas según el usuario."""
-    if user.is_superuser:
-        return Area.objects.all()
-    
-    area = get_area_responsable(user)
-    if area:
-        return Area.objects.filter(id=area.id)
-    
-    return Area.objects.none()
+    # Todos los usuarios pueden ver todas las áreas (son catálogos)
+    # La restricción de edición se hace a nivel de vista
+    return Area.objects.all()
 
 
 def filtrar_subareas(user):

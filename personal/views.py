@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from calendar import monthrange
 from collections import defaultdict
 import json
+import re
 
 from .models import Area, SubArea, Personal, Roster, RosterAudit
 from .forms import AreaForm, SubAreaForm, PersonalForm, RosterForm, ImportExcelForm
@@ -91,7 +92,8 @@ def area_list(request):
     
     context = {
         'areas': areas,
-        'buscar': buscar
+        'buscar': buscar,
+        'puede_crear': request.user.is_superuser,  # Solo superusuarios pueden crear áreas
     }
     context.update(get_context_usuario(request.user))
     return render(request, 'personal/area_list.html', context)
@@ -100,6 +102,11 @@ def area_list(request):
 @login_required
 def area_create(request):
     """Crear nueva area."""
+    # Solo superusuarios pueden crear áreas
+    if not request.user.is_superuser:
+        messages.error(request, 'Solo los administradores pueden crear áreas.')
+        return redirect('area_list')
+    
     if request.method == 'POST':
         form = AreaForm(request.POST)
         if form.is_valid():
@@ -109,12 +116,19 @@ def area_create(request):
     else:
         form = AreaForm()
     
-    return render(request, 'personal/area_form.html', {'form': form})
+    context = {'form': form}
+    context.update(get_context_usuario(request.user))
+    return render(request, 'personal/area_form.html', context)
 
 
 @login_required
 def area_update(request, pk):
     """Actualizar area."""
+    # Solo superusuarios pueden editar áreas
+    if not request.user.is_superuser:
+        messages.error(request, 'Solo los administradores pueden editar áreas.')
+        return redirect('area_list')
+    
     area = get_object_or_404(Area, pk=pk)
     
     if request.method == 'POST':
@@ -126,10 +140,12 @@ def area_update(request, pk):
     else:
         form = AreaForm(instance=area)
     
-    return render(request, 'personal/area_form.html', {
+    context = {
         'form': form,
         'area': area
-    })
+    }
+    context.update(get_context_usuario(request.user))
+    return render(request, 'personal/area_form.html', context)
 
 
 # ================== ÁREAS ==================
@@ -153,17 +169,19 @@ def subarea_list(request):
     
     areas = Area.objects.filter(activa=True)
     
-    return render(request, 'personal/subarea_list.html', {
+    context = {
         'subareas': subareas,
         'areas': areas,
         'buscar': buscar,
         'area_id': area_id
-    })
+    }
+    context.update(get_context_usuario(request.user))
+    return render(request, 'personal/subarea_list.html', context)
 
 
 @login_required
 def subarea_create(request):
-    """Crear nueva área."""
+    """Crear nueva SubÁrea."""
     if request.method == 'POST':
         form = SubAreaForm(request.POST)
         if form.is_valid():
@@ -173,12 +191,14 @@ def subarea_create(request):
     else:
         form = SubAreaForm()
     
-    return render(request, 'personal/area_form.html', {'form': form})
+    context = {'form': form}
+    context.update(get_context_usuario(request.user))
+    return render(request, 'personal/area_form.html', context)
 
 
 @login_required
 def subarea_update(request, pk):
-    """Actualizar área."""
+    """Actualizar SubÁrea."""
     area = get_object_or_404(SubArea, pk=pk)
     
     if request.method == 'POST':
@@ -190,10 +210,12 @@ def subarea_update(request, pk):
     else:
         form = SubAreaForm(instance=area)
     
-    return render(request, 'personal/area_form.html', {
+    context = {
         'form': form,
-        'subarea': subarea
-    })
+        'area': area
+    }
+    context.update(get_context_usuario(request.user))
+    return render(request, 'personal/area_form.html', context)
 
 
 # ================== PERSONAL ==================
@@ -1038,8 +1060,13 @@ def roster_import(request):
                 mes = int(request.POST.get('mes', datetime.now().month))
                 anio = int(request.POST.get('anio', datetime.now().year))
                 
-                # Obtener columnas de días
-                columnas_dias = [col for col in df.columns if col.startswith('Dia')]
+                # Obtener columnas de días (solo formato Dia1, Dia2, ... Dia31)
+                import re
+                columnas_dias = []
+                for col in df.columns:
+                    # Solo columnas que sean exactamente "Dia" seguido de un número
+                    if re.match(r'^Dia\d+$', str(col)):
+                        columnas_dias.append(col)
                 
                 creados = 0
                 actualizados = 0

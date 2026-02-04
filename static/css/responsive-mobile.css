@@ -1,0 +1,342 @@
+/* =============================================================================
+   RESPONSIVE MOBILE IMPROVEMENTS
+   ============================================================================= */
+
+/* Asegurar que la vista no tenga scroll horizontal innecesario */
+html {
+    overflow-x: hidden;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+/* Mejorar legibilidad en pantallas pequeñas */
+@media (max-width: 768px) {
+    /* Navbar mejorado */
+    .navbar {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .navbar-brand {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .navbar .navbar-nav .nav-link {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.9rem;
+    }
+    
+    /* Sidebar colapsable */
+    .sidebar {
+        max-width: 100%;
+        position: relative;
+        border-radius: 0;
+    }
+    
+    .sidebar.collapse {
+        display: none;
+    }
+    
+    .sidebar.collapse.show {
+        display: block;
+        max-height: none;
+    }
+    
+    /* Mejor espaciado vertical en listas */
+    .sidebar .nav-item {
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .sidebar .nav-item:last-child {
+        border-bottom: none;
+    }
+    
+    /* Contenido principal sin márgenes excesivos */
+    main {
+        width: 100% !important;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+    }
+    
+    .content-wrapper {
+        padding: 1rem 0.75rem;
+    }
+    
+    /* Tablas horizontales scrollables */
+    .table-responsive {
+        border: none;
+        margin: -0.75rem;
+        margin-top: 0.75rem;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    /* Mejoras en DataTables para móvil */
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.35rem 0.5rem;
+        margin: 0.2rem;
+    }
+    
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        margin-bottom: 0.5rem;
+    }
+    
+    .dataTables_wrapper .dataTables_length select,
+    .dataTables_wrapper .dataTables_filter input {
+        max-width: 100%;
+    }
+    
+    /* Botones en fila con mejor espaciado */
+    .btn-group-vertical .btn,
+    .btn-toolbar .btn {
+        margin: 0.25rem;
+    }
+    
+    /* Cards mejor espaciadas */
+    .card {
+        border-radius: 0.35rem;
+    }
+    
+    .card-title {
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+    
+    /* Formularios optimizados */
+    .form-group, .mb-3 {
+        margin-bottom: 1rem;
+    }
+    
+    .form-control, .form-select {
+        font-size: 16px; /* Previene zoom en iOS */
+        border-radius: 0.35rem;
+    }
+    
+    /* Input groups */
+    .input-group {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .input-group > .form-control,
+    .input-group > .form-select {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    /* Badges mejor visibles */
+    .badge {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Dropdowns mejor posicionados */
+    .dropdown-menu {
+        max-width: 90vw;
+        left: 5vw !important;
+        right: auto !important;
+    }
+    
+    /* Modales responsivos */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-content {
+        border-radius: 0.35rem;
+    }
+    
+    /* Acordeones más claros */
+    .accordion-button {
+        font-size: 0.95rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .accordion-body {
+        padding: 1rem;
+    }
+    
+    /* Texto seleccionable pero sin efectos molestos */
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* Pantallas muy pequeñas (menos de 576px) */
+@media (max-width: 576px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .navbar-brand i {
+        margin-right: 0.25rem;
+    }
+    
+    .content-wrapper {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    /* Botones apilados en móvil */
+    .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-group .btn {
+        width: auto;
+        display: inline-block;
+    }
+    
+    /* Reducir padding en pequeños elementos */
+    .card {
+        margin-bottom: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem;
+    }
+    
+    /* Tabla comprimida en móvil */
+    .table {
+        font-size: 0.8rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.4rem;
+    }
+    
+    /* Ocultar columnas innecesarias en móvil */
+    .d-none-mobile {
+        display: none !important;
+    }
+    
+    /* Formularios apilados */
+    .row > [class*="col-"] {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Páginación mejor en móvil */
+    .pagination {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .page-item {
+        margin: 0;
+    }
+    
+    .page-link {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Pantallas muy pequeñas (menos de 360px) */
+@media (max-width: 360px) {
+    body {
+        font-size: 12px;
+    }
+    
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1.1rem; }
+    h3 { font-size: 1rem; }
+    
+    .navbar-brand {
+        font-size: 0.9rem;
+    }
+    
+    .content-wrapper {
+        padding: 0.5rem;
+    }
+    
+    .table {
+        font-size: 0.75rem;
+    }
+    
+    .btn {
+        padding: 0.4rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Optimización para dispositivos touch */
+@media (hover: none) and (pointer: coarse) {
+    /* Aumentar área de toque */
+    .btn, .nav-link, .page-link {
+        min-height: 44px;
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Quitar hover states molestos */
+    a:active, button:active {
+        opacity: 0.8;
+    }
+    
+    /* Evitar efectos que no sean útiles en touch */
+    .btn:hover {
+        transform: none;
+    }
+}
+
+/* Scrolling suave en iOS */
+-webkit-overflow-scrolling: touch;
+
+/* Mejorar legibilidad en conexiones lentas */
+@media (prefers-reduced-data: reduce) {
+    * {
+        background-attachment: scroll !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Preferencia de contraste alto */
+@media (prefers-contrast: more) {
+    .btn, .form-control, .card {
+        border-width: 2px;
+    }
+    
+    .text-muted {
+        color: #555 !important;
+    }
+}
+
+/* Accesibilidad: focus visible mejorado */
+*:focus-visible {
+    outline: 2px solid var(--secondary-color);
+    outline-offset: 2px;
+}
+
+/* Eliminar outline en focus no visible */
+*:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Print styles */
+@media print {
+    .navbar, .sidebar, .content-wrapper > .alert {
+        display: none;
+    }
+    
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    
+    main {
+        width: 100%;
+        padding: 0;
+    }
+}

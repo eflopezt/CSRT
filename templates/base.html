@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+{% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,9 @@
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
     
+    <!-- Custom Responsive CSS -->
+    <link rel="stylesheet" href="{% static 'css/responsive-mobile.css' %}">
+    
     {% block extra_css %}{% endblock %}
     
     <style>
@@ -22,59 +26,473 @@
             --secondary-color: #3498db;
         }
         
+        * {
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
         }
         
         .navbar {
             background-color: var(--primary-color) !important;
+            padding: 0.5rem 0;
+            min-height: 56px;
+        }
+        
+        .navbar-brand {
+            font-size: 1.25rem !important;
+            font-weight: 600;
+        }
+        
+        .navbar-brand i {
+            margin-right: 0.5rem;
+        }
+        
+        /* Mejora de visibilidad en móvil */
+        .navbar .dropdown-toggle::after {
+            margin-left: 0.5rem;
+        }
+        
+        .navbar .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
         }
         
         .sidebar {
-            min-height: calc(100vh - 56px);
             background-color: #f8f9fa;
             border-right: 1px solid #dee2e6;
+            position: relative;
+            z-index: 100;
         }
         
         .sidebar .nav-link {
             color: #495057;
             padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 0.75rem;
+            min-width: 20px;
+            text-align: center;
         }
         
         .sidebar .nav-link:hover {
             background-color: #e9ecef;
+            border-left-color: var(--secondary-color);
         }
         
         .sidebar .nav-link.active {
             background-color: var(--secondary-color);
             color: white;
+            border-left-color: var(--secondary-color);
+            font-weight: 600;
+        }
+        
+        .sidebar .badge {
+            margin-left: auto;
+            font-size: 0.75rem;
         }
         
         .content-wrapper {
-            padding: 2rem;
+            padding: 1.5rem;
+            min-height: calc(100vh - 56px);
+            width: 100%;
+            overflow-x: hidden;
         }
         
         .stat-card {
             border-left: 4px solid var(--secondary-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        /* Tabla responsiva */
+        .table-responsive {
+            font-size: 0.9rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .table {
+            margin-bottom: 1rem;
+            min-width: 100%;
+        }
+        
+        .table thead th {
+            white-space: nowrap;
+            padding: 0.75rem;
+            font-weight: 600;
+            background-color: #f8f9fa;
+        }
+        
+        .table td {
+            padding: 0.75rem;
+            word-break: break-word;
+        }
+        
+        /* Mejoras de formularios */
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            font-size: 0.95rem;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        
+        /* Botones responsivos */
+        .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .btn-sm {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        
+        /* Cards responsivas */
+        .card {
+            border-radius: 0.375rem;
+            border: 1px solid #dee2e6;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+        }
+        
+        /* Alertas */
+        .alert {
+            border-radius: 0.375rem;
+            border: none;
+            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+        }
+        
+        .alert i {
+            margin-right: 0.5rem;
+        }
+        
+        /* Dropdown menus */
+        .dropdown-menu {
+            border-radius: 0.375rem;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 0.5rem 0;
+        }
+        
+        .dropdown-item {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.95rem;
+        }
+        
+        .dropdown-header {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #6c757d;
+        }
+        
+        /* Media queries para dispositivos pequeños */
+        @media (max-width: 768px) {
+            html, body {
+                font-size: 14px;
+            }
+            
+            .navbar {
+                padding: 0.5rem 0;
+            }
+            
+            .navbar-brand {
+                font-size: 1.1rem !important;
+            }
+            
+            .navbar .nav-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+            
+            .sidebar {
+                min-height: auto;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+                margin-bottom: 1rem;
+            }
+            
+            .sidebar.show {
+                max-height: 500px;
+                overflow-y: auto;
+            }
+            
+            .sidebar .nav-link {
+                padding: 0.65rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .content-wrapper {
+                padding: 1rem;
+                margin-top: 0;
+            }
+            
+            .col-md-2, .col-md-10 {
+                width: 100% !important;
+            }
+            
+            .container-fluid > .row {
+                margin-left: -0.5rem;
+                margin-right: -0.5rem;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .btn-group {
+                display: flex;
+                gap: 0.25rem;
+            }
+            
+            .btn-group .btn {
+                flex: 1;
+                width: auto;
+                margin-bottom: 0;
+            }
+            
+            .table {
+                font-size: 0.85rem;
+            }
+            
+            .table thead th, .table td {
+                padding: 0.5rem;
+            }
+            
+            .table thead th {
+                white-space: normal;
+            }
+            
+            .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.35rem;
+            }
+            
+            .form-control, .form-select {
+                font-size: 16px; /* Previene zoom en iOS */
+                padding: 0.75rem;
+            }
+            
+            .form-check {
+                margin-bottom: 0.75rem;
+            }
+            
+            .row {
+                margin-left: -0.5rem;
+                margin-right: -0.5rem;
+            }
+            
+            .col-sm-6, .col-md-6 {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+            
+            .dropdown-menu {
+                min-width: 100%;
+                left: 0 !important;
+                right: 0 !important;
+            }
+            
+            .alert {
+                padding: 0.75rem;
+                font-size: 0.9rem;
+                margin-bottom: 1rem;
+            }
+            
+            h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+            h2 { font-size: 1.25rem; margin-bottom: 0.9rem; }
+            h3 { font-size: 1.1rem; margin-bottom: 0.8rem; }
+            h4 { font-size: 1rem; margin-bottom: 0.7rem; }
+            h5 { font-size: 0.95rem; }
+            h6 { font-size: 0.9rem; }
+            
+            .badge {
+                font-size: 0.7rem;
+                padding: 0.25rem 0.4rem;
+            }
+            
+            .position-sticky {
+                position: static;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            body {
+                font-size: 13px;
+            }
+            
+            .navbar-brand {
+                font-size: 1rem !important;
+            }
+            
+            .navbar-brand i {
+                margin-right: 0.25rem;
+            }
+            
+            .content-wrapper {
+                padding: 0.75rem;
+            }
+            
+            .card {
+                margin-bottom: 0.75rem;
+                border-radius: 0.25rem;
+            }
+            
+            .card-header {
+                padding: 0.75rem;
+                font-size: 0.95rem;
+            }
+            
+            .card-body {
+                padding: 0.75rem;
+            }
+            
+            .btn {
+                padding: 0.5rem 0.5rem;
+                font-size: 0.85rem;
+            }
+            
+            .table {
+                font-size: 0.8rem;
+            }
+            
+            .table thead th, .table td {
+                padding: 0.4rem;
+            }
+            
+            .form-control, .form-select {
+                font-size: 16px;
+                padding: 0.6rem 0.5rem;
+            }
+            
+            .form-label {
+                font-size: 0.85rem;
+            }
+            
+            .dropdown-item {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            h1 { font-size: 1.35rem; }
+            h2 { font-size: 1.15rem; }
+            h3 { font-size: 1rem; }
+            h4 { font-size: 0.95rem; }
+        }
+        
+        /* Modo oscuro opcional para mejor lectura */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1e1e1e;
+                color: #e0e0e0;
+            }
+            
+            .sidebar {
+                background-color: #2d2d2d;
+            }
+            
+            .navbar {
+                background-color: #1a1a1a !important;
+            }
+            
+            .card {
+                background-color: #2d2d2d;
+                border-color: #444;
+            }
+            
+            .form-control, .form-select {
+                background-color: #3d3d3d;
+                border-color: #555;
+                color: #e0e0e0;
+            }
+            
+            .table {
+                color: #e0e0e0;
+                border-color: #444;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'home' %}">
-                <i class="fas fa-users"></i> Gestión Personal
+                <i class="fas fa-users"></i><span class="d-none d-sm-inline"> Gestión Personal</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            
+            {% if user.is_authenticated %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarNav" aria-controls="sidebarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            {% endif %}
+            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user-circle"></i> {{ user.username }}
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle"></i> <span class="d-none d-sm-inline">{{ user.username }}</span>
                                 {% if es_responsable %}
                                     <span class="badge bg-info ms-1">Responsable</span>
                                 {% elif user.is_superuser %}
@@ -96,7 +514,7 @@
                     {% else %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'login' %}">
-                                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                                <i class="fas fa-sign-in-alt"></i> <span class="d-none d-sm-inline">Iniciar Sesión</span>
                             </a>
                         </li>
                     {% endif %}
@@ -106,64 +524,64 @@
     </nav>
 
     <div class="container-fluid">
-        <div class="row">
+        <div class="row g-0">
             <!-- Sidebar -->
             {% if user.is_authenticated %}
-            <nav class="col-md-2 d-md-block sidebar">
-                <div class="position-sticky pt-3">
+            <nav class="col-lg-2 sidebar" id="sidebarNav">
+                <div class="position-sticky pt-2">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'home' %}">
-                                <i class="fas fa-home"></i> Inicio
+                            <a class="nav-link" href="{% url 'home' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
+                                <i class="fas fa-home"></i> <span class="nav-text">Inicio</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'area_list' %}">
-                                <i class="fas fa-building"></i> Áreas
+                            <a class="nav-link" href="{% url 'area_list' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
+                                <i class="fas fa-building"></i> <span class="nav-text">Áreas</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'subarea_list' %}">
-                                <i class="fas fa-sitemap"></i> SubÁreas
+                            <a class="nav-link" href="{% url 'subarea_list' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
+                                <i class="fas fa-sitemap"></i> <span class="nav-text">SubÁreas</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'personal_list' %}">
-                                <i class="fas fa-users"></i> Personal
+                            <a class="nav-link" href="{% url 'personal_list' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
+                                <i class="fas fa-users"></i> <span class="nav-text">Personal</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'roster_matricial' %}">
-                                <i class="fas fa-table"></i> Roster Matricial
+                            <a class="nav-link" href="{% url 'roster_matricial' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
+                                <i class="fas fa-table"></i> <span class="nav-text">Roster Matricial</span>
                             </a>
                         </li>
                         {% comment %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'roster_list' %}">
+                            <a class="nav-link" href="{% url 'roster_list' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
                                 <i class="fas fa-list"></i> Roster Lista
                             </a>
                         </li>
                         {% endcomment %}
                         {% if user.is_superuser or es_responsable %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'dashboard_aprobaciones' %}">
-                                <i class="fas fa-tasks"></i> Aprobaciones
+                            <a class="nav-link" href="{% url 'dashboard_aprobaciones' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
+                                <i class="fas fa-tasks"></i> <span class="nav-text">Aprobaciones</span>
                                 {% if cambios_pendientes > 0 %}
-                                <span class="badge bg-warning text-dark ms-1">{{ cambios_pendientes }}</span>
+                                <span class="badge bg-warning text-dark ms-auto">{{ cambios_pendientes }}</span>
                                 {% endif %}
                             </a>
                         </li>
                         {% endif %}
                         {% if user.is_superuser %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'usuario_list' %}">
-                                <i class="fas fa-users-cog"></i> Gestión de Usuarios
+                            <a class="nav-link" href="{% url 'usuario_list' %}" data-bs-toggle="collapse" data-bs-target="#sidebarNav">
+                                <i class="fas fa-users-cog"></i> <span class="nav-text">Gestión de Usuarios</span>
                             </a>
                         </li>
                         {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="/api/" target="_blank">
-                                <i class="fas fa-code"></i> API
+                                <i class="fas fa-code"></i> <span class="nav-text">API</span>
                             </a>
                         </li>
                     </ul>
@@ -172,7 +590,7 @@
             {% endif %}
 
             <!-- Main content -->
-            <main class="col-md-{% if user.is_authenticated %}10{% else %}12{% endif %} ms-sm-auto px-md-4">
+            <main class="col-lg-{% if user.is_authenticated %}10{% else %}12{% endif %} ms-0 px-2 px-md-4">
                 <div class="content-wrapper">
                     <!-- Messages -->
                     {% if messages %}

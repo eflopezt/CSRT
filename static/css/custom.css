@@ -1,1 +1,103 @@
-/* Custom CSS */
+/* =============================================================================
+   CUSTOM STYLES FOR CSRT SYSTEM
+   ============================================================================= */
+
+/* Additional custom styles beyond Bootstrap defaults */
+
+/* Animaciones suaves */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Aplicar animación a mensajes */
+.alert {
+    animation: slideInDown 0.3s ease-out;
+}
+
+/* Animación en cards */
+.card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Transiciones suaves en links */
+a {
+    transition: all 0.2s ease;
+}
+
+/* Mejorar footer si existe */
+footer {
+    margin-top: auto;
+    padding: 2rem 0;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Estilos para spinner de carga */
+.spinner-border {
+    animation: spinner-border 0.75s linear infinite;
+}
+
+/* Evitar que las imágenes se salgan del contenedor */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Mejorar legibilidad de código */
+code, pre {
+    background-color: #f5f5f5;
+    border-radius: 0.25rem;
+    padding: 0.2rem 0.4rem;
+}
+
+pre {
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+/* Estilos para detalles */
+details {
+    margin: 1rem 0;
+}
+
+summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.5rem 0;
+}
+
+summary:hover {
+    color: var(--secondary-color);
+}
+
+/* Print styles */
+@media print {
+    body {
+        background: white;
+    }
+    
+    .navbar, .sidebar, .pagination, .btn {
+        display: none;
+    }
+    
+    .content-wrapper {
+        padding: 0;
+        width: 100%;
+    }
+}
