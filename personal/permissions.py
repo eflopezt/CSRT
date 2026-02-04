@@ -100,11 +100,26 @@ def get_context_usuario(user):
     """
     Retorna contexto común para el usuario (gerencia, es_responsable, etc).
     """
+    from .models import Roster
+    
     es_responsable = es_responsable_area(user)
     area = get_area_responsable(user) if es_responsable else None
+    
+    # Contar cambios pendientes de aprobación
+    cambios_pendientes = 0
+    if user.is_superuser:
+        # Admin ve todos los pendientes
+        cambios_pendientes = Roster.objects.filter(estado='pendiente').count()
+    elif area:
+        # Responsable ve solo los de su área
+        cambios_pendientes = Roster.objects.filter(
+            estado='pendiente',
+            personal__subarea__area=area
+        ).count()
     
     return {
         'es_responsable': es_responsable,
         'area_responsable': area,
         'es_superusuario': user.is_superuser,
+        'cambios_pendientes': cambios_pendientes,
     }

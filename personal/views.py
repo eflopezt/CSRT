@@ -30,26 +30,10 @@ from .permissions import (
 @login_required
 def home(request):
     """Vista principal del sistema."""
-    from .permissions import get_area_responsable
-    
     # Aplicar filtros según usuario
     gerencias_filtradas = filtrar_areas(request.user)
     areas_filtradas = filtrar_subareas(request.user)
     personal_filtrado = filtrar_personal(request.user)
-    
-    # Contar cambios pendientes de aprobación para líderes
-    cambios_pendientes = 0
-    if request.user.is_superuser:
-        # Admin ve todos los pendientes
-        cambios_pendientes = Roster.objects.filter(estado='pendiente').count()
-    else:
-        # Verificar si es responsable de área
-        area = get_area_responsable(request.user)
-        if area:
-            cambios_pendientes = Roster.objects.filter(
-                estado='pendiente',
-                personal__subarea__area=area
-            ).count()
     
     context = {
         'total_gerencias': gerencias_filtradas.filter(activa=True).count(),
@@ -59,7 +43,6 @@ def home(request):
             fecha=datetime.now().date(),
             personal__in=personal_filtrado
         ).count(),
-        'cambios_pendientes': cambios_pendientes,
     }
     context.update(get_context_usuario(request.user))
     return render(request, 'home.html', context)
