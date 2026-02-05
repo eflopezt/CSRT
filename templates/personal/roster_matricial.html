@@ -28,15 +28,23 @@
         position: sticky;
         top: 0;
         z-index: 20;
+        background-color: #2c3e50 !important;
     }
     
     .roster-table th {
-        background-color: #2c3e50;
-        color: white;
+        background-color: #2c3e50 !important;
+        color: white !important;
         white-space: nowrap;
         padding: 8px 4px;
         text-align: center;
-        border: 1px solid #1a252f;
+        border: 1px solid #1a252f !important;
+        font-weight: 600;
+        vertical-align: middle;
+    }
+    
+    .roster-table thead th {
+        background-color: #2c3e50 !important;
+        color: #ffffff !important;
     }
     
     .roster-table td {
@@ -64,26 +72,35 @@
         box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     }
     
-    .roster-table thead th.col-nombre {
-        z-index: 25;
-        background-color: #1a252f;
-    }
-    
     .roster-table tbody tr:hover .col-nombre {
         background-color: #f8f9fa;
     }
     
+    .roster-table thead th.col-nombre {
+        z-index: 25;
+        background-color: #1a252f !important;
+        color: #ffffff !important;
+        font-weight: 700;
+    }
+    
     .col-dias-libres {
-        background-color: #e7f3ff;
+        background-color: #e7f3ff !important;
         font-weight: bold;
-        position: sticky;
-        left: 200px;
-        z-index: 4;
+    }
+    
+    .roster-table thead th.col-dias-libres {
+        background-color: #2c3e50 !important;
+        color: #ffffff !important;
     }
     
     .col-dias-trabajados {
-        background-color: #fff3cd;
+        background-color: #fff3cd !important;
         font-weight: bold;
+    }
+    
+    .roster-table thead th.col-dias-trabajados {
+        background-color: #2c3e50 !important;
+        color: #ffffff !important;
     }
     
     .codigo-dia {
