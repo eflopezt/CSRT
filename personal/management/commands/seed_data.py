@@ -3,7 +3,7 @@ Comando para crear datos de prueba en el sistema.
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from personal.models import Gerencia, Area, Personal, Roster
+from personal.models import Area, SubArea, Personal, Roster
 from datetime import date, timedelta
 from decimal import Decimal
 import random
@@ -31,44 +31,44 @@ class Command(BaseCommand):
             )
             self.stdout.write(self.style.SUCCESS('✓ Superusuario admin creado (pass: admin123)'))
 
-        # Crear gerencias
-        gerencias_data = [
+        # Crear areas (antes llamadas gerencias)
+        areas_data = [
             {'nombre': 'GERENCIA DE OPERACIONES', 'descripcion': 'Gestión de operaciones'},
             {'nombre': 'GERENCIA DE LOGÍSTICA', 'descripcion': 'Gestión logística'},
             {'nombre': 'GERENCIA DE RECURSOS HUMANOS', 'descripcion': 'Gestión de personal'},
             {'nombre': 'GERENCIA DE FINANZAS', 'descripcion': 'Gestión financiera'},
         ]
 
-        gerencias = []
-        for data in gerencias_data:
-            gerencia, created = Gerencia.objects.get_or_create(
+        areas = []
+        for data in areas_data:
+            area, created = Area.objects.get_or_create(
                 nombre=data['nombre'],
                 defaults={'descripcion': data['descripcion']}
             )
-            gerencias.append(gerencia)
-            if created:
-                self.stdout.write(f'  ✓ Gerencia creada: {gerencia.nombre}')
-
-        # Crear áreas
-        areas_data = [
-            ('ADMINISTRACIÓN', gerencias[2]),
-            ('LOGÍSTICA', gerencias[1]),
-            ('MANTENIMIENTO', gerencias[0]),
-            ('SEGURIDAD', gerencias[0]),
-            ('FINANZAS', gerencias[3]),
-            ('CONTABILIDAD', gerencias[3]),
-        ]
-
-        areas = []
-        for nombre, gerencia in areas_data:
-            area, created = Area.objects.get_or_create(
-                nombre=nombre,
-                gerencia=gerencia,
-                defaults={'descripcion': f'Área de {nombre}'}
-            )
             areas.append(area)
             if created:
-                self.stdout.write(f'  ✓ Área creada: {area.nombre} ({gerencia.nombre})')
+                self.stdout.write(f'  ✓ Área creada: {area.nombre}')
+
+        # Crear subareas
+        subareas_data = [
+            ('ADMINISTRACIÓN', areas[2]),
+            ('LOGÍSTICA', areas[1]),
+            ('MANTENIMIENTO', areas[0]),
+            ('SEGURIDAD', areas[0]),
+            ('FINANZAS', areas[3]),
+            ('CONTABILIDAD', areas[3]),
+        ]
+
+        subareas = []
+        for nombre, area in subareas_data:
+            subarea, created = SubArea.objects.get_or_create(
+                nombre=nombre,
+                area=area,
+                defaults={'descripcion': f'SubÁrea de {nombre}'}
+            )
+            subareas.append(subarea)
+            if created:
+                self.stdout.write(f'  ✓ SubÁrea creada: {subarea.nombre} ({area.nombre})')
 
         # Crear personal
         personal_data = [
@@ -84,14 +84,14 @@ class Command(BaseCommand):
 
         personal_list = []
         for i, (doc, nombre, cargo, tipo) in enumerate(personal_data):
-            area = areas[i % len(areas)]
+            subarea = subareas[i % len(subareas)]
             personal, created = Personal.objects.get_or_create(
                 nro_doc=doc,
                 defaults={
                     'apellidos_nombres': nombre,
                     'cargo': cargo,
                     'tipo_trab': tipo,
-                    'area': area,
+                    'subarea': subarea,
                     'fecha_alta': date.today() - timedelta(days=random.randint(30, 365)),
                     'estado': 'Activo',
                     'sexo': 'M' if i % 2 == 0 else 'F',
@@ -108,12 +108,12 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f'  ✓ Personal creado: {nombre}')
 
-        # Asignar responsables a gerencias
-        for i, gerencia in enumerate(gerencias):
-            if not gerencia.responsable and i < len(personal_list):
-                gerencia.responsable = personal_list[i]
-                gerencia.save()
-                self.stdout.write(f'  ✓ Responsable asignado a {gerencia.nombre}')
+        # Asignar responsables a areas
+        for i, area in enumerate(areas):
+            if not area.responsable and i < len(personal_list):
+                area.responsable = personal_list[i]
+                area.save()
+                self.stdout.write(f'  ✓ Responsable asignado a {area.nombre}')
 
         # Crear roster si se especificó
         if options['with_roster']:
@@ -151,8 +151,7 @@ class Command(BaseCommand):
                 count_tr = Roster.objects.filter(personal=personal, codigo='TR').count()
                 dias_libres_t = count_t // 3
                 dias_libres_tr = (count_tr // 5) * 2
-                personal.dias_libres_ganados = Decimal(dias_libres_t + dias_libres_tr)
-                personal.save()
+                # Los dias libres ganados se calculan desde el roster, no se persisten.
             
             self.stdout.write(self.style.SUCCESS(f'✓ Roster creado para {len(personal_list)} personas'))
             self.stdout.write(self.style.SUCCESS(f'✓ Días libres calculados automáticamente'))

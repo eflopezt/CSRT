@@ -3,8 +3,8 @@ Script de prueba para verificar las mejoras implementadas.
 Ejecutar con: python manage.py shell < test_mejoras.py
 """
 import logging
-from personal.validators import PersonalValidator, RosterValidator, GerenciaValidator
-from personal.models import Personal, Gerencia, Area
+from personal.validators import PersonalValidator, RosterValidator, AreaValidator
+from personal.models import Personal, Area
 
 # Configurar logging para ver los mensajes
 logging.basicConfig(level=logging.INFO)
@@ -104,9 +104,9 @@ def verificar_indices(tabla, indices_esperados):
 
 # Verificar índices de las tablas
 try:
-    verificar_indices('personal_gerencia', ['nombre', 'activa'])
-    verificar_indices('personal_area', ['gerencia', 'nombre'])
-    verificar_indices('personal_personal', ['nro_doc', 'estado', 'area'])
+    verificar_indices('personal_area', ['nombre', 'activa'])
+    verificar_indices('personal_subarea', ['area', 'nombre'])
+    verificar_indices('personal_personal', ['nro_doc', 'estado', 'subarea'])
     verificar_indices('personal_roster', ['personal', 'fecha', 'estado'])
 except Exception as e:
     print(f"Nota: No se pudo verificar índices (requiere PostgreSQL): {e}")
@@ -119,7 +119,6 @@ print("-" * 70)
 
 # Verificar que los modelos tienen el método clean
 modelos_con_clean = [
-    ('Gerencia', Gerencia),
     ('Area', Area),
     ('Personal', Personal),
 ]

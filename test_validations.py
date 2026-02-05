@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script para probar las validaciones de Rooster
+Script para probar las validaciones de Roster
 """
 import os
 import django
@@ -9,13 +9,13 @@ from datetime import date, timedelta
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 django.setup()
 
-from personal.models import Gerencia, Area, Personal, Rooster
+from personal.models import Area, Personal, Roster
 from personal.forms import RosterForm
 from django.core.exceptions import ValidationError
 
 def test_validaciones():
     print("=" * 80)
-    print("PRUEBAS DE VALIDACIONES DE ROOSTER")
+    print("PRUEBAS DE VALIDACIONES DE ROSTER")
     print("=" * 80)
     
     # Obtener datos de prueba
@@ -43,7 +43,7 @@ def test_validaciones():
         base_date = date.today() + timedelta(days=30)
         for i in range(7):
             fecha = base_date + timedelta(days=i)
-            Rooster.objects.get_or_create(
+            Roster.objects.get_or_create(
                 personal=personal,
                 fecha=fecha,
                 defaults={'codigo': 'DLA'}
@@ -54,8 +54,8 @@ def test_validaciones():
         # Intentar crear el 8vo DLA consecutivo
         fecha_8 = base_date + timedelta(days=7)
         try:
-            rooster = Rooster(personal=personal, fecha=fecha_8, codigo='DLA')
-            rooster.full_clean()
+            roster = Roster(personal=personal, fecha=fecha_8, codigo='DLA')
+            roster.full_clean()
             print("❌ ERROR: Se permitió crear el 8vo DLA consecutivo")
         except ValidationError as e:
             error_messages = str(e)
@@ -80,8 +80,8 @@ def test_validaciones():
             personal.dias_libres_corte_2025 = 0
             personal.save()
             
-            rooster = Rooster(personal=personal, fecha=fecha_test, codigo='DLA')
-            rooster.full_clean()
+            roster = Roster(personal=personal, fecha=fecha_test, codigo='DLA')
+            roster.full_clean()
             print("❌ ERROR: Se permitió crear DLA sin días disponibles")
         except ValidationError as e:
             error_messages = str(e)
@@ -121,7 +121,7 @@ def test_validaciones():
         print("=" * 80)
         
         # Obtener uno de los DLA creados
-        roster_existente = Rooster.objects.filter(
+        roster_existente = Roster.objects.filter(
             personal=personal,
             fecha__gte=base_date,
             fecha__lt=base_date + timedelta(days=7),
@@ -141,7 +141,7 @@ def test_validaciones():
         print("=" * 80)
         
         # Limpiar datos de prueba
-        Rooster.objects.filter(
+        Roster.objects.filter(
             personal=personal,
             fecha__gte=base_date
         ).delete()

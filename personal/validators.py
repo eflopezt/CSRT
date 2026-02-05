@@ -165,7 +165,7 @@ class PersonalValidator:
 class RosterValidator:
     """Validador para el modelo Roster."""
     
-    CODIGOS_VALIDOS = ['T', 'TR', 'D', 'V', 'L', 'S', 'F', 'P', 'DM', 'DS']
+    CODIGOS_VALIDOS = ['T', 'TR', 'D', 'V', 'L', 'S', 'F', 'P', 'DM', 'DS', 'DL', 'DLA', 'DOL', 'FC']
     
     @staticmethod
     def validar_codigo(codigo):
@@ -252,7 +252,7 @@ class RosterValidator:
 
 
 class AreaValidator:
-    """Validador para el modelo Gerencia."""
+    """Validador para el modelo Area."""
     
     @staticmethod
     def validar_responsable_unico(responsable, area_id=None):
@@ -261,13 +261,15 @@ class AreaValidator:
         
         Args:
             responsable: Instancia de Personal
-            area_id: ID de la gerencia actual (para actualizaciones)
+            area_id: ID del area actual (para actualizaciones)
         
         Raises:
             ValidationError: Si el responsable ya está asignado
         """
         if not responsable:
             return True
+        
+        from .models import Area
         
         query = Area.objects.filter(responsable=responsable)
         

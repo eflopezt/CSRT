@@ -3,15 +3,15 @@
 ## ✅ Progreso de Configuración
 
 - [x] Crear estructura de directorios base
-- [ ] Configurar proyecto Django con settings modulares
-- [ ] Crear modelos de datos
-- [ ] Configurar Django REST Framework
-- [ ] Crear requirements y Docker
-- [ ] Configurar herramientas de desarrollo
-- [ ] Crear vistas y templates
-- [ ] Configurar Celery y Redis
-- [ ] Instalar dependencias
-- [ ] Crear comandos de management
+- [x] Configurar proyecto Django con settings modulares
+- [x] Crear modelos de datos
+- [x] Configurar Django REST Framework
+- [x] Crear requirements y Docker
+- [x] Configurar herramientas de desarrollo
+- [x] Crear vistas y templates
+- [x] Configurar Celery y Redis
+- [x] Instalar dependencias
+- [x] Crear comandos de management
 
 ## Descripción del Proyecto
 

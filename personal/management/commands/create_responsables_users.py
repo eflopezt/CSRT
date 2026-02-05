@@ -1,35 +1,35 @@
 """
-Comando para crear usuarios para los responsables de gerencia.
+Comando para crear usuarios para los responsables de area.
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from personal.models import Gerencia, Personal
+from personal.models import Area, Personal
 
 
 class Command(BaseCommand):
-    help = 'Crea usuarios para los responsables de gerencia y configura permisos'
+    help = 'Crea usuarios para los responsables de area y configura permisos'
 
     def handle(self, *args, **kwargs):
-        self.stdout.write(self.style.WARNING('\n🔧 Creando usuarios para responsables de gerencia...\n'))
+        self.stdout.write(self.style.WARNING('\n🔧 Creando usuarios para responsables de area...\n'))
         
-        # Crear o obtener grupo "Responsable de Gerencia"
-        grupo_responsable, created = Group.objects.get_or_create(name='Responsable de Gerencia')
+        # Crear o obtener grupo "Responsable de Área"
+        grupo_responsable, created = Group.objects.get_or_create(name='Responsable de Área')
         if created:
             self.stdout.write(self.style.SUCCESS(f'  ✓ Grupo creado: {grupo_responsable.name}'))
             
             # Asignar permisos al grupo
             content_types = {
                 'personal': ContentType.objects.get_for_model(Personal),
-                'gerencia': ContentType.objects.get_for_model(Gerencia),
+                'area': ContentType.objects.get_for_model(Area),
             }
             
             permisos_responsable = [
                 # Permisos de Personal
                 Permission.objects.get(codename='view_personal', content_type=content_types['personal']),
                 Permission.objects.get(codename='change_personal', content_type=content_types['personal']),
-                # Permisos de Gerencia (solo ver)
-                Permission.objects.get(codename='view_gerencia', content_type=content_types['gerencia']),
+                # Permisos de Area (solo ver)
+                Permission.objects.get(codename='view_area', content_type=content_types['area']),
             ]
             
             grupo_responsable.permissions.set(permisos_responsable)
@@ -37,18 +37,18 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING(f'  ⚠ Grupo ya existe: {grupo_responsable.name}'))
         
-        # Obtener gerencias con responsables
-        gerencias = Gerencia.objects.filter(responsable__isnull=False).select_related('responsable')
+        # Obtener areas con responsables
+        areas = Area.objects.filter(responsable__isnull=False).select_related('responsable')
         
-        if not gerencias.exists():
-            self.stdout.write(self.style.WARNING('\n  ⚠ No hay gerencias con responsables asignados'))
+        if not areas.exists():
+            self.stdout.write(self.style.WARNING('\n  ⚠ No hay areas con responsables asignados'))
             return
         
-        self.stdout.write(self.style.WARNING(f'\n📋 Procesando {gerencias.count()} gerencia(s)...\n'))
+        self.stdout.write(self.style.WARNING(f'\n📋 Procesando {areas.count()} area(s)...\n'))
         
         usuarios_creados = []
-        for gerencia in gerencias:
-            responsable = gerencia.responsable
+        for area in areas:
+            responsable = area.responsable
             
             # Crear username a partir del nombre
             # Ejemplo: "GARCÍA LÓPEZ, JUAN CARLOS" -> "jgarcia"
@@ -96,18 +96,18 @@ class Command(BaseCommand):
                 responsable.save()
                 
                 usuarios_creados.append({
-                    'gerencia': gerencia.nombre,
+                    'area': area.nombre,
                     'responsable': responsable.apellidos_nombres,
                     'username': username,
                     'password': password
                 })
                 
                 self.stdout.write(self.style.SUCCESS(
-                    f'  ✓ Usuario creado: {username} para {responsable.apellidos_nombres} ({gerencia.nombre})'
+                    f'  ✓ Usuario creado: {username} para {responsable.apellidos_nombres} ({area.nombre})'
                 ))
             else:
                 # Ya tiene usuario, solo asegurarse de que esté en el grupo
-                if not responsable.usuario.groups.filter(name='Responsable de Gerencia').exists():
+                if not responsable.usuario.groups.filter(name='Responsable de Área').exists():
                     responsable.usuario.groups.add(grupo_responsable)
                     self.stdout.write(self.style.SUCCESS(
                         f'  ✓ Grupo asignado a: {responsable.usuario.username} ({responsable.apellidos_nombres})'
@@ -122,7 +122,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('\n✅ Usuarios creados exitosamente!\n'))
             self.stdout.write(self.style.WARNING('📝 Credenciales de acceso:\n'))
             for user_info in usuarios_creados:
-                self.stdout.write(f"   {user_info['gerencia']}:")
+                self.stdout.write(f"   {user_info['area']}:")
                 self.stdout.write(f"   - Responsable: {user_info['responsable']}")
                 self.stdout.write(f"   - Usuario: {user_info['username']}")
                 self.stdout.write(f"   - Contraseña: {user_info['password']}\n")
