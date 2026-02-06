@@ -5,6 +5,7 @@ Verifica que el fix del error 500 funciona correctamente.
 """
 import os
 import django
+import pytest
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 django.setup()
@@ -12,6 +13,7 @@ django.setup()
 from personal.models import Area, Personal
 
 
+@pytest.mark.django_db
 def test_sistema_responsables():
     """Test completo del sistema de responsables."""
     print("=" * 70)
@@ -36,6 +38,20 @@ def test_sistema_responsables():
     try:
         total_areas = Area.objects.count()
         total_personal = Personal.objects.count()
+
+        if total_areas == 0:
+            Area.objects.create(nombre="AREA TEST")
+            total_areas = Area.objects.count()
+
+        if total_personal == 0:
+            Personal.objects.create(
+                nro_doc="99999999",
+                apellidos_nombres="RESPONSABLE TEST",
+                cargo="CARGO",
+                tipo_trab="Empleado",
+            )
+            total_personal = Personal.objects.count()
+
         assert total_areas > 0, "Debe haber al menos un área"
         assert total_personal > 0, "Debe haber al menos un personal"
         print(f"  ✓ Total áreas: {total_areas}")
@@ -49,6 +65,13 @@ def test_sistema_responsables():
     try:
         area = Area.objects.first()
         personal = Personal.objects.exclude(fecha_cese__isnull=False).first()
+        if not personal:
+            personal = Personal.objects.create(
+                nro_doc="99999998",
+                apellidos_nombres="RESPONSABLE TEST 2",
+                cargo="CARGO",
+                tipo_trab="Empleado",
+            )
         
         # Limpiar responsables previos para test limpio
         responsables_previos = area.responsables.count()
@@ -80,6 +103,14 @@ def test_sistema_responsables():
         personal2 = Personal.objects.exclude(
             fecha_cese__isnull=False
         ).exclude(id=personal.id).first()
+
+        if not personal2:
+            personal2 = Personal.objects.create(
+                nro_doc="99999997",
+                apellidos_nombres="RESPONSABLE TEST 3",
+                cargo="CARGO",
+                tipo_trab="Empleado",
+            )
         
         if personal2:
             area.responsables.add(personal2)
@@ -118,7 +149,6 @@ def test_sistema_responsables():
         print(f"\nErrores encontrados ({len(errores)}):")
         for i, error in enumerate(errores, 1):
             print(f"{i}. {error}")
-        return False
     else:
         print("✅ TODOS LOS TESTS PASARON CORRECTAMENTE")
         print("\nEl sistema de responsables está funcionando bien:")
@@ -127,9 +157,13 @@ def test_sistema_responsables():
         print("  • Relaciones inversas operativas")
         print("  • Múltiples responsables soportado")
         print("  • Admin panel ready")
-        return True
+
+    assert not errores, "Se encontraron errores en el test de responsables"
 
 
 if __name__ == '__main__':
-    exito = test_sistema_responsables()
-    exit(0 if exito else 1)
+    try:
+        test_sistema_responsables()
+    except AssertionError:
+        exit(1)
+    exit(0)

@@ -3,6 +3,7 @@ Script de prueba para validar que los días libres pendientes no puedan ser nega
 """
 import os
 import django
+import pytest
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 django.setup()
@@ -10,6 +11,7 @@ django.setup()
 from personal.models import Personal, Roster
 from datetime import date, timedelta
 
+@pytest.mark.django_db
 def test_validacion_dl():
     """
     Prueba la validación de días libres pendientes.

@@ -4,6 +4,7 @@ Test del nuevo selector dual de responsables en el formulario de áreas.
 """
 import os
 import django
+import pytest
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 django.setup()
@@ -12,6 +13,7 @@ from personal.forms import AreaForm
 from personal.models import Area, Personal
 
 
+@pytest.mark.django_db
 def test_area_form_widget():
     """Test del widget FilteredSelectMultiple en AreaForm."""
     print("=" * 70)
