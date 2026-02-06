@@ -1,10 +1,102 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block title %}{% if area %}Editar{% else %}Nueva{% endif %} Área{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'admin/css/widgets.css' %}">
+<style>
+    /* Estilos para el selector múltiple filtrado */
+    .selector {
+        width: 100%;
+        display: flex;
+        gap: 10px;
+        margin: 15px 0;
+    }
+    
+    .selector-available, .selector-chosen {
+        width: 48%;
+    }
+    
+    .selector h2 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px 4px 0 0;
+    }
+    
+    .selector select {
+        width: 100%;
+        height: 200px;
+        border: 1px solid #ced4da;
+        border-radius: 0 0 4px 4px;
+        padding: 5px;
+    }
+    
+    .selector-chooser {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 0;
+    }
+    
+    .selector-chooser a {
+        display: inline-block;
+        width: 40px;
+        height: 35px;
+        line-height: 35px;
+        text-align: center;
+        background-color: #007bff;
+        color: white;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .selector-chooser a:hover {
+        background-color: #0056b3;
+        transform: scale(1.05);
+    }
+    
+    .selector-filter {
+        margin-bottom: 8px;
+    }
+    
+    .selector-filter input {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    
+    .selector-filter label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    #id_responsables {
+        display: none;
+    }
+    
+    /* Ajustar ancho del card para el selector */
+    .area-form-container .col-md-8 {
+        max-width: 900px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
+<div class="row justify-content-center area-form-container">
     <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
@@ -24,4 +116,27 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+<script src="{% static 'admin/js/jquery.init.js' %}"></script>
+<script src="{% static 'admin/js/core.js' %}"></script>
+<script src="{% static 'admin/js/SelectBox.js' %}"></script>
+<script src="{% static 'admin/js/SelectFilter2.js' %}"></script>
+<script>
+(function($) {
+    $(document).ready(function() {
+        // Inicializar el selector filtrado
+        if (typeof SelectFilter !== 'undefined') {
+            SelectFilter.init('id_responsables', 'Responsables', 0);
+        }
+        
+        // Asegurar que los valores seleccionados se envíen con el formulario
+        $('form').submit(function() {
+            $('#id_responsables option').prop('selected', true);
+        });
+    });
+})(django.jQuery);
+</script>
 {% endblock %}

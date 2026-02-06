@@ -2,6 +2,7 @@
 Formularios para el módulo personal.
 """
 from django import forms
+from django.contrib.admin.widgets import FilteredSelectMultiple
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column, Div
 from .models import Area, SubArea, Personal, Roster
@@ -13,13 +14,21 @@ class AreaForm(forms.ModelForm):
         fields = ['nombre', 'responsables', 'descripcion', 'activa']
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3}),
-            'responsables': forms.SelectMultiple(),
+            'responsables': FilteredSelectMultiple(
+                verbose_name='Responsables',
+                is_stacked=False
+            ),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Ordenar el queryset de responsables por apellidos_nombres
+        self.fields['responsables'].queryset = self.fields['responsables'].queryset.order_by('apellidos_nombres')
+        self.fields['responsables'].help_text = 'Selecciona uno o más responsables para esta área'
+        
         self.helper = FormHelper()
         self.helper.form_method = 'post'
+        self.helper.form_class = 'area-form'
         self.helper.add_input(Submit('submit', 'Guardar', css_class='btn btn-primary'))
 
 
