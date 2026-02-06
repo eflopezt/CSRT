@@ -70,8 +70,8 @@ def area_list(request):
     if buscar:
         areas = areas.filter(
             Q(nombre__icontains=buscar) |
-            Q(responsable__apellidos_nombres__icontains=buscar)
-        )
+            Q(responsables__apellidos_nombres__icontains=buscar)
+        ).distinct()
     
     context = {
         'areas': areas,
@@ -618,7 +618,7 @@ def area_export(request):
     areas = filtrar_areas(request.user)
     
     # Crear plantilla con datos actuales
-    excel_file = crear_plantilla_gerencias(gerencias)
+    excel_file = crear_plantilla_gerencias(areas)
     
     response = HttpResponse(
         excel_file.read(),
@@ -661,20 +661,27 @@ def area_import(request):
                         if not nombre or nombre == 'nan':
                             continue
                         
-                        # Buscar responsable si se proporciona DNI
-                        responsable = None
-                        if 'Responsable_DNI' in row and pd.notna(row['Responsable_DNI']):
-                            try:
-                                # Procesar DNI correctamente
+                        responsables_list = None
+                        fila_con_error = False
+                        if 'Responsable_DNI' in row:
+                            responsables_list = []
+                            if pd.notna(row['Responsable_DNI']):
                                 dni_responsable = row['Responsable_DNI']
                                 if isinstance(dni_responsable, (int, float)):
                                     dni_responsable = str(int(dni_responsable)).strip()
                                 else:
                                     dni_responsable = str(dni_responsable).strip()
-                                
-                                responsable = Personal.objects.get(nro_doc=dni_responsable)
-                            except Personal.DoesNotExist:
-                                errores.append(f"Fila {idx + 2}: Responsable con DNI {dni_responsable} no encontrado")
+
+                                dni_list = [d.strip() for d in re.split(r'[;,]', dni_responsable) if d.strip()]
+                                for dni in dni_list:
+                                    try:
+                                        responsables_list.append(Personal.objects.get(nro_doc=dni))
+                                    except Personal.DoesNotExist:
+                                        errores.append(f"Fila {idx + 2}: Responsable con DNI {dni} no encontrado")
+                                        fila_con_error = True
+
+                            if fila_con_error:
+                                continue
                         
                         # Determinar si está activa
                         activa = True
@@ -685,11 +692,12 @@ def area_import(request):
                         area, created = Area.objects.update_or_create(
                             nombre=nombre,
                             defaults={
-                                'responsable': responsable,
                                 'descripcion': row.get('Descripcion', '') if pd.notna(row.get('Descripcion')) else '',
                                 'activa': activa,
                             }
                         )
+                        if responsables_list is not None:
+                            area.responsables.set(responsables_list)
                         
                         if created:
                             creados += 1
@@ -740,7 +748,7 @@ def subarea_export(request):
     """Exportar áreas a Excel con plantilla y catálogos."""
     subareas = filtrar_subareas(request.user)
     
-    excel_file = crear_plantilla_areas(areas)
+    excel_file = crear_plantilla_areas(subareas)
     
     response = HttpResponse(
         excel_file.read(),
@@ -1243,7 +1251,7 @@ def roster_update_cell(request):
                 }, status=400)
         
         # Determinar el estado según el usuario
-        from .permissions import get_area_responsable
+        from .permissions import get_areas_responsable
         
         estado_inicial = 'aprobado'  # Por defecto aprobado para admin
         
@@ -1252,8 +1260,10 @@ def roster_update_cell(request):
             if hasattr(request.user, 'personal_data') and request.user.personal_data == personal:
                 estado_inicial = 'borrador'
             # Para líderes/responsables, el cambio va aprobado directamente
-            elif get_area_responsable(request.user):
-                estado_inicial = 'aprobado'
+            else:
+                areas_responsable = get_areas_responsable(request.user)
+                if personal.subarea and areas_responsable.filter(pk=personal.subarea.area_id).exists():
+                    estado_inicial = 'aprobado'
         
         if codigo:
             # Crear o actualizar roster
@@ -1314,24 +1324,33 @@ def roster_update_cell(request):
 @login_required
 def dashboard_aprobaciones(request):
     """Dashboard completo de aprobaciones para responsables."""
-    from .permissions import get_area_responsable
+    from .permissions import get_areas_responsable
     from django.db.models import Q, Count
     
     # Verificar permisos
-    area = None
+    areas_responsable = Area.objects.none()
     if request.user.is_superuser:
         pendientes_qs = Roster.objects.filter(estado='pendiente')
         borradores_qs = Roster.objects.filter(estado='borrador')
         aprobados_qs = Roster.objects.filter(estado='aprobado')
     else:
-        area = get_area_responsable(request.user)
-        if not area:
+        areas_responsable = get_areas_responsable(request.user)
+        if not areas_responsable.exists():
             messages.error(request, 'No tiene permisos para ver el dashboard de aprobaciones.')
             return redirect('home')
         
-        pendientes_qs = Roster.objects.filter(estado='pendiente', personal__subarea__area=area)
-        borradores_qs = Roster.objects.filter(estado='borrador', personal__subarea__area=area)
-        aprobados_qs = Roster.objects.filter(estado='aprobado', personal__subarea__area=area)
+        pendientes_qs = Roster.objects.filter(
+            estado='pendiente',
+            personal__subarea__area__in=areas_responsable
+        )
+        borradores_qs = Roster.objects.filter(
+            estado='borrador',
+            personal__subarea__area__in=areas_responsable
+        )
+        aprobados_qs = Roster.objects.filter(
+            estado='aprobado',
+            personal__subarea__area__in=areas_responsable
+        )
     
     # Filtros
     buscar = request.GET.get('buscar', '')
@@ -1377,15 +1396,15 @@ def dashboard_aprobaciones(request):
     # Obtener áreas para filtro
     if request.user.is_superuser:
         areas = SubArea.objects.filter(activa=True).order_by('nombre')
-    elif area:
-        areas = SubArea.objects.filter(area=area, activa=True).order_by('nombre')
+    elif areas_responsable.exists():
+        areas = SubArea.objects.filter(area__in=areas_responsable, activa=True).order_by('nombre')
     else:
         areas = SubArea.objects.none()
     
     context = {
         'pendientes': pendientes,
         'stats': stats,
-        'area': area,
+        'areas_responsable': areas_responsable,
         'subareas': areas,
         'buscar': buscar,
         'area_filtro': subarea_filtro,
@@ -1811,7 +1830,7 @@ def usuario_sincronizar(request):
                             persona.save(update_fields=['usuario'])
                             
                             # Si es responsable, agregar a grupo
-                            if hasattr(persona, 'area_responsable'):
+                            if persona.areas_responsable.exists():
                                 grupo, _ = Group.objects.get_or_create(name='Responsable de Área')
                                 usuario.groups.add(grupo)
                             

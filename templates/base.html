@@ -488,9 +488,12 @@
                                 {% endif %}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                {% if es_responsable and area_responsable %}
+                                {% if es_responsable and areas_responsable %}
                                 <li><h6 class="dropdown-header">
-                                    <i class="fas fa-building"></i> {{ area_responsable.nombre }}
+                                    <i class="fas fa-building"></i>
+                                    {% for area in areas_responsable %}
+                                        {{ area.nombre }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
                                 </h6></li>
                                 <li><hr class="dropdown-divider"></li>
                                 {% endif %}

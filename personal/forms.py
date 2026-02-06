@@ -10,9 +10,10 @@ from .models import Area, SubArea, Personal, Roster
 class AreaForm(forms.ModelForm):
     class Meta:
         model = Area
-        fields = ['nombre', 'responsable', 'descripcion', 'activa']
+        fields = ['nombre', 'responsables', 'descripcion', 'activa']
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3}),
+            'responsables': forms.SelectMultiple(),
         }
     
     def __init__(self, *args, **kwargs):

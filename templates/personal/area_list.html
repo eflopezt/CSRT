@@ -40,7 +40,7 @@
                 <thead>
                     <tr>
                         <th>Nombre</th>
-                        <th>Responsable</th>
+                        <th>Responsables</th>
                         <th>Total SubÁreas</th>
                         <th>Estado</th>
                         <th>Acciones</th>
@@ -50,7 +50,13 @@
                     {% for area in areas %}
                     <tr>
                         <td><strong>{{ area.nombre }}</strong></td>
-                        <td>{{ area.responsable|default:"-" }}</td>
+                        <td>
+                            {% for responsable in area.responsables.all %}
+                                {{ responsable }}{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                -
+                            {% endfor %}
+                        </td>
                         <td><span class="badge bg-info">{{ area.total_subareas }}</span></td>
                         <td>
                             {% if area.activa %}

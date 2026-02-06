@@ -11,17 +11,29 @@ def es_responsable_area(user):
     """Verifica si el usuario es responsable de un área."""
     if user.is_superuser:
         return False
-    return user.groups.filter(name='Responsable de Área').exists()
+    if user.groups.filter(name='Responsable de Área').exists():
+        return True
+    return get_areas_responsable(user).exists()
+
+
+def get_areas_responsable(user):
+    """Obtiene las áreas de las que el usuario es responsable."""
+    if user.is_superuser:
+        return Area.objects.none()
+
+    personal = getattr(user, 'personal_data', None)
+    if not personal:
+        personal = Personal.objects.filter(usuario=user).first()
+
+    if not personal:
+        return Area.objects.none()
+
+    return Area.objects.filter(responsables=personal)
 
 
 def get_area_responsable(user):
-    """Obtiene el área de la que el usuario es responsable."""
-    try:
-        personal = user.personal_data
-        area = Area.objects.get(responsable=personal)
-        return area
-    except (AttributeError, Area.DoesNotExist, Personal.DoesNotExist):
-        return None
+    """Obtiene una sola área responsable (compatibilidad para UI)."""
+    return get_areas_responsable(user).first()
 
 
 def filtrar_areas(user):
@@ -36,9 +48,9 @@ def filtrar_subareas(user):
     if user.is_superuser:
         return SubArea.objects.all()
     
-    area = get_area_responsable(user)
-    if area:
-        return SubArea.objects.filter(area=area)
+    areas = get_areas_responsable(user)
+    if areas.exists():
+        return SubArea.objects.filter(area__in=areas)
     
     return SubArea.objects.none()
 
@@ -51,16 +63,16 @@ def filtrar_personal(user):
     # Si el usuario tiene un Personal vinculado, puede ver su propio registro
     if hasattr(user, 'personal_data') and user.personal_data:
         # Si también es responsable, ve su área completa
-        area = get_area_responsable(user)
-        if area:
-            return Personal.objects.filter(subarea__area=area)
+        areas = get_areas_responsable(user)
+        if areas.exists():
+            return Personal.objects.filter(subarea__area__in=areas)
         # Si solo es personal regular, solo ve su propio registro
         return Personal.objects.filter(id=user.personal_data.id)
     
     # Si es responsable sin Personal vinculado (caso legacy)
-    area = get_area_responsable(user)
-    if area:
-        return Personal.objects.filter(subarea__area=area)
+    areas = get_areas_responsable(user)
+    if areas.exists():
+        return Personal.objects.filter(subarea__area__in=areas)
     
     return Personal.objects.none()
 
@@ -75,8 +87,8 @@ def puede_editar_personal(user, personal):
         return True
     
     # Un responsable puede editar el personal de su área
-    area = get_area_responsable(user)
-    if area and personal.subarea and personal.subarea.area == area:
+    areas = get_areas_responsable(user)
+    if personal.subarea and areas.filter(pk=personal.subarea.area_id).exists():
         return True
     
     return False
@@ -103,23 +115,22 @@ def get_context_usuario(user):
     from .models import Roster
     
     es_responsable = es_responsable_area(user)
-    area = get_area_responsable(user) if es_responsable else None
+    areas = get_areas_responsable(user) if es_responsable else Area.objects.none()
     
     # Contar cambios pendientes de aprobación
     cambios_pendientes = 0
     if user.is_superuser:
-        # Admin ve todos los pendientes
         cambios_pendientes = Roster.objects.filter(estado='pendiente').count()
-    elif area:
-        # Responsable ve solo los de su área
+    elif areas.exists():
         cambios_pendientes = Roster.objects.filter(
             estado='pendiente',
-            personal__subarea__area=area
+            personal__subarea__area__in=areas
         ).count()
     
     return {
         'es_responsable': es_responsable,
-        'area_responsable': area,
+        'area_responsable': areas.first(),
+        'areas_responsable': areas,
         'es_superusuario': user.is_superuser,
         'cambios_pendientes': cambios_pendientes,
     }

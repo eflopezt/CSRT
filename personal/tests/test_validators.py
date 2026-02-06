@@ -111,29 +111,16 @@ class TestRosterValidator:
 
 @pytest.mark.django_db
 class TestAreaValidator:
-    def test_validar_responsable_unico(self):
+    def test_responsable_multiple_areas_permitido(self):
         responsable = Personal.objects.create(
             nro_doc="87654321",
             apellidos_nombres="RESPONSABLE TEST",
             cargo="CARGO",
             tipo_trab="Empleado",
         )
-        area = Area.objects.create(nombre="AREA UNO", responsable=responsable)
+        area_uno = Area.objects.create(nombre="AREA UNO")
+        area_uno.responsables.add(responsable)
+        area_dos = Area.objects.create(nombre="AREA DOS")
+        area_dos.responsables.add(responsable)
 
-        with pytest.raises(ValidationError):
-            AreaValidator.validar_responsable_unico(responsable)
-
-        assert AreaValidator.validar_responsable_unico(responsable, area_id=area.id) is True
-
-    def test_area_clean_detecta_responsable_duplicado(self):
-        responsable = Personal.objects.create(
-            nro_doc="11223344",
-            apellidos_nombres="RESPONSABLE DOS",
-            cargo="CARGO",
-            tipo_trab="Empleado",
-        )
-        Area.objects.create(nombre="AREA BASE", responsable=responsable)
-        area_nueva = Area(nombre="AREA DUP", responsable=responsable)
-
-        with pytest.raises(ValidationError):
-            area_nueva.clean()
+        assert AreaValidator.validar_responsable_unico(responsable) is True

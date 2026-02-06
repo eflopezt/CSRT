@@ -6,12 +6,13 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 import logging
 import pandas as pd
+import re
 from decimal import Decimal
 from datetime import datetime
 
 from .models import Area, SubArea, Personal, Roster, RosterAudit
 from .validators import (
-    PersonalValidator, RosterValidator, AreaValidator,
+    PersonalValidator, RosterValidator,
     validar_archivo_excel
 )
 
@@ -24,13 +25,14 @@ class AreaService:
     
     @staticmethod
     @transaction.atomic
-    def crear_gerencia(nombre, responsable=None, descripcion='', activa=True, usuario=None):
+    def crear_gerencia(nombre, responsable=None, responsables=None, descripcion='', activa=True, usuario=None):
         """
         Crea una gerencia de forma segura con validaciones.
         
         Args:
             nombre: Nombre de la gerencia
-            responsable: Personal responsable (opcional)
+            responsable: Personal responsable (opcional, compatibilidad)
+            responsables: Lista de Personal responsables (opcional)
             descripcion: Descripción
             activa: Si está activa
             usuario: Usuario que realiza la acción
@@ -47,15 +49,19 @@ class AreaService:
         if not nombre or not nombre.strip():
             raise ValidationError('El nombre de la gerencia es obligatorio.')
         
-        if responsable:
-            AreaValidator.validar_responsable_unico(responsable)
+        responsables_list = []
+        if responsables:
+            responsables_list = list(responsables)
+        elif responsable:
+            responsables_list = [responsable]
         
         area = Area.objects.create(
             nombre=nombre.strip(),
-            responsable=responsable,
             descripcion=descripcion,
             activa=activa
         )
+        if responsables_list:
+            area.responsables.set(responsables_list)
         
         logger.info(f"Gerencia '{nombre}' creada exitosamente (ID: {area.id})")
         return area
@@ -100,18 +106,25 @@ class AreaService:
                 if not nombre or nombre == 'nan':
                     continue
                 
-                # Buscar responsable si se proporciona DNI
-                responsable = None
-                if 'Responsable_DNI' in row and pd.notna(row['Responsable_DNI']):
-                    try:
-                        responsable = Personal.objects.get(
-                            nro_doc=str(row['Responsable_DNI']).strip()
-                        )
-                    except Personal.DoesNotExist:
-                        errores.append(
-                            f"Fila {idx + 2}: Responsable con DNI "
-                            f"{row['Responsable_DNI']} no encontrado"
-                        )
+                responsables_list = None
+                fila_con_error = False
+                if 'Responsable_DNI' in row:
+                    responsables_list = []
+                    if pd.notna(row['Responsable_DNI']):
+                        dni_raw = str(row['Responsable_DNI'])
+                        dni_list = [d.strip() for d in re.split(r'[;,]', dni_raw) if d.strip()]
+                        for dni in dni_list:
+                            try:
+                                responsables_list.append(
+                                    Personal.objects.get(nro_doc=dni)
+                                )
+                            except Personal.DoesNotExist:
+                                errores.append(
+                                    f"Fila {idx + 2}: Responsable con DNI {dni} no encontrado"
+                                )
+                                fila_con_error = True
+
+                    if fila_con_error:
                         continue
                 
                 # Determinar si está activa
@@ -123,11 +136,12 @@ class AreaService:
                 gerencia, created = Area.objects.update_or_create(
                     nombre=nombre,
                     defaults={
-                        'responsable': responsable,
                         'descripcion': row.get('Descripcion', '') if pd.notna(row.get('Descripcion')) else '',
                         'activa': activa,
                     }
                 )
+                if responsables_list is not None:
+                    gerencia.responsables.set(responsables_list)
                 
                 if created:
                     creados += 1

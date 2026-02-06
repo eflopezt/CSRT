@@ -110,9 +110,8 @@ class Command(BaseCommand):
 
         # Asignar responsables a areas
         for i, area in enumerate(areas):
-            if not area.responsable and i < len(personal_list):
-                area.responsable = personal_list[i]
-                area.save()
+            if area.responsables.count() == 0 and i < len(personal_list):
+                area.responsables.add(personal_list[i])
                 self.stdout.write(f'  ✓ Responsable asignado a {area.nombre}')
 
         # Crear roster si se especificó

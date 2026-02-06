@@ -22,7 +22,7 @@ class AreaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activa']
-    search_fields = ['nombre', 'responsable__apellidos_nombres']
+    search_fields = ['nombre', 'responsables__apellidos_nombres']
     ordering_fields = ['nombre', 'creado_en']
     ordering = ['nombre']
 

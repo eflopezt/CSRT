@@ -36,10 +36,14 @@ admin.site.register(User, UserAdmin)
 
 @admin.register(Area)
 class AreaAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'responsable', 'activa', 'creado_en']
+    list_display = ['nombre', 'responsables_display', 'activa', 'creado_en']
     list_filter = ['activa', 'creado_en']
-    search_fields = ['nombre', 'responsable__apellidos_nombres']
-    raw_id_fields = ['responsable']
+    search_fields = ['nombre', 'responsables__apellidos_nombres']
+    filter_horizontal = ['responsables']
+
+    def responsables_display(self, obj):
+        return ", ".join(p.apellidos_nombres for p in obj.responsables.all()) or "-"
+    responsables_display.short_description = 'Responsables'
 
 
 @admin.register(SubArea)

@@ -11,17 +11,15 @@ from .user_models import UserProfile
 class Area(models.Model):
     """
     Áreas o departamentos de alto nivel.
-    Cada área tiene un único responsable.
+    Cada área puede tener uno o varios responsables.
     """
     nombre = models.CharField(max_length=150, unique=True, verbose_name="Nombre de Área")
-    responsable = models.OneToOneField(
+    responsables = models.ManyToManyField(
         'Personal',
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
-        related_name='area_responsable',
-        verbose_name="Responsable",
-        help_text="Persona responsable de esta área"
+        related_name='areas_responsable',
+        verbose_name="Responsables",
+        help_text="Personas responsables de esta área"
     )
     descripcion = models.TextField(blank=True, verbose_name="Descripción")
     activa = models.BooleanField(default=True, verbose_name="Activa")
@@ -43,11 +41,7 @@ class Area(models.Model):
     
     def clean(self):
         """Validación del modelo usando validadores centralizados."""
-        from .validators import AreaValidator
-        
-        # Validar que el responsable no esté asignado a otra área
-        if self.responsable:
-            AreaValidator.validar_responsable_unico(self.responsable, self.pk)
+        super().clean()
 
 
 class SubArea(models.Model):
@@ -597,24 +591,24 @@ class Roster(models.Model):
             return True, ""
         
         # Verificar si es responsable del área del personal
-        from .permissions import get_area_responsable
-        area = get_area_responsable(usuario)
-        if area and self.personal.subarea and self.personal.subarea.area == area:
+        from .permissions import get_areas_responsable
+        areas = get_areas_responsable(usuario)
+        if self.personal.subarea and areas.filter(pk=self.personal.subarea.area_id).exists():
             return True, ""
         
         return False, "No tiene permisos para editar este registro"
     
     def puede_aprobar(self, usuario):
         """Verifica si un usuario puede aprobar cambios en este registro."""
-        from .permissions import get_area_responsable
+        from .permissions import get_areas_responsable
         
         # Admin puede aprobar todo
         if usuario.is_superuser:
             return True
         
         # Verificar si es responsable del área del personal
-        area = get_area_responsable(usuario)
-        if area and self.personal.subarea and self.personal.subarea.area == area:
+        areas = get_areas_responsable(usuario)
+        if self.personal.subarea and areas.filter(pk=self.personal.subarea.area_id).exists():
             return True
         
         return False

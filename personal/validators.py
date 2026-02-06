@@ -257,32 +257,18 @@ class AreaValidator:
     @staticmethod
     def validar_responsable_unico(responsable, area_id=None):
         """
-        Valida que el responsable no esté asignado a otra area.
+        Valida que el responsable sea válido.
         
         Args:
             responsable: Instancia de Personal
             area_id: ID del area actual (para actualizaciones)
         
-        Raises:
-            ValidationError: Si el responsable ya está asignado
+        Returns:
+            bool: Siempre True (compatibilidad)
         """
         if not responsable:
             return True
-        
-        from .models import Area
-        
-        query = Area.objects.filter(responsable=responsable)
-        
-        if area_id:
-            query = query.exclude(pk=area_id)
-        
-        if query.exists():
-            gerencia_actual = query.first()
-            raise ValidationError(
-                _(f'{responsable.apellidos_nombres} ya es responsable de '
-                  f'"{gerencia_actual.nombre}".')
-            )
-        
+
         logger.info(f"Responsable validado: {responsable.apellidos_nombres}")
         return True
 

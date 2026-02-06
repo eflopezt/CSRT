@@ -226,10 +226,11 @@ def crear_plantilla_gerencias(gerencias_queryset=None):
     if gerencias_queryset:
         data = []
         for g in gerencias_queryset:
+            responsables = list(g.responsables.all())
             data.append({
                 'Nombre': g.nombre,
-                'Responsable_DNI': g.responsable.nro_doc if g.responsable else '',
-                'Responsable_Nombre': g.responsable.apellidos_nombres if g.responsable else '',
+                'Responsable_DNI': ', '.join([p.nro_doc for p in responsables]),
+                'Responsable_Nombre': ', '.join([p.apellidos_nombres for p in responsables]),
                 'Descripcion': g.descripcion,
                 'Activa': 'Sí' if g.activa else 'No',
             })
@@ -242,7 +243,7 @@ def crear_plantilla_gerencias(gerencias_queryset=None):
             'Activa': 'Sí',
         }]
     
-    df_areas = pd.DataFrame(data)
+    df_gerencias = pd.DataFrame(data)
     
     # Catálogo de responsables
     catalogos = {

@@ -6,14 +6,14 @@ from .models import Area, SubArea, Personal, Roster, RosterAudit
 
 
 class AreaSerializer(serializers.ModelSerializer):
-    responsable_nombre = serializers.CharField(source='responsable.apellidos_nombres', read_only=True)
+    responsables_nombres = serializers.SerializerMethodField()
     total_areas = serializers.SerializerMethodField()
     total_personal = serializers.SerializerMethodField()
     
     class Meta:
         model = Area
         fields = [
-            'id', 'nombre', 'responsable', 'responsable_nombre',
+            'id', 'nombre', 'responsables', 'responsables_nombres',
             'descripcion', 'activa', 'total_areas', 'total_personal',
             'creado_en', 'actualizado_en'
         ]
@@ -28,6 +28,9 @@ class AreaSerializer(serializers.ModelSerializer):
             subarea__area=obj,
             estado='Activo'
         ).count()
+
+    def get_responsables_nombres(self, obj):
+        return [p.apellidos_nombres for p in obj.responsables.all()]
 
 
 class SubAreaSerializer(serializers.ModelSerializer):

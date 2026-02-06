@@ -242,7 +242,7 @@ class Command(BaseCommand):
 
                         # Agregar a grupo según rol (opcional)
                         # Si es responsable de área, agregar al grupo correspondiente
-                        if hasattr(persona, 'area_responsable'):
+                        if persona.areas_responsable.exists():
                             grupo, _ = Group.objects.get_or_create(name='Responsable de Área')
                             usuario.groups.add(grupo)
 

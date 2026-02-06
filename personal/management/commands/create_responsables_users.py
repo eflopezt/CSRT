@@ -38,7 +38,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'  ⚠ Grupo ya existe: {grupo_responsable.name}'))
         
         # Obtener areas con responsables
-        areas = Area.objects.filter(responsable__isnull=False).select_related('responsable')
+        areas = Area.objects.filter(responsables__isnull=False).prefetch_related('responsables').distinct()
         
         if not areas.exists():
             self.stdout.write(self.style.WARNING('\n  ⚠ No hay areas con responsables asignados'))
@@ -48,74 +48,73 @@ class Command(BaseCommand):
         
         usuarios_creados = []
         for area in areas:
-            responsable = area.responsable
+            for responsable in area.responsables.all():
+                # Crear username a partir del nombre
+                # Ejemplo: "GARCÍA LÓPEZ, JUAN CARLOS" -> "jgarcia"
+                nombres_completos = responsable.apellidos_nombres.strip()
+                if ',' in nombres_completos:
+                    apellidos, nombres = nombres_completos.split(',', 1)
+                    primer_nombre = nombres.strip().split()[0] if nombres.strip() else ''
+                    primer_apellido = apellidos.strip().split()[0] if apellidos.strip() else ''
+                else:
+                    partes = nombres_completos.split()
+                    primer_nombre = partes[0] if len(partes) > 0 else ''
+                    primer_apellido = partes[-1] if len(partes) > 1 else ''
             
-            # Crear username a partir del nombre
-            # Ejemplo: "GARCÍA LÓPEZ, JUAN CARLOS" -> "jgarcia"
-            nombres_completos = responsable.apellidos_nombres.strip()
-            if ',' in nombres_completos:
-                apellidos, nombres = nombres_completos.split(',', 1)
-                primer_nombre = nombres.strip().split()[0] if nombres.strip() else ''
-                primer_apellido = apellidos.strip().split()[0] if apellidos.strip() else ''
-            else:
-                partes = nombres_completos.split()
-                primer_nombre = partes[0] if len(partes) > 0 else ''
-                primer_apellido = partes[-1] if len(partes) > 1 else ''
-            
-            # Username: primera letra del nombre + primer apellido (minúsculas, sin acentos)
-            username_base = f"{primer_nombre[0]}{primer_apellido}".lower() if primer_nombre and primer_apellido else responsable.nro_doc
-            username_base = self._quitar_acentos(username_base)
-            
-            # Verificar si el username ya existe y agregar número si es necesario
-            username = username_base
-            contador = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{username_base}{contador}"
-                contador += 1
-            
-            # Crear usuario si no tiene uno asignado
-            if not responsable.usuario:
-                # Contraseña temporal: responsable123
-                password = 'responsable123'
-                
-                user = User.objects.create_user(
-                    username=username,
-                    email=responsable.correo_corporativo or responsable.correo_personal or f'{username}@empresa.com',
-                    password=password,
-                    first_name=primer_nombre[:30],
-                    last_name=primer_apellido[:150]
-                )
-                
-                # Asignar al grupo
-                user.groups.add(grupo_responsable)
-                user.is_staff = True  # Puede acceder al admin si es necesario
-                user.save()
-                
-                # Vincular usuario con personal
-                responsable.usuario = user
-                responsable.save()
-                
-                usuarios_creados.append({
-                    'area': area.nombre,
-                    'responsable': responsable.apellidos_nombres,
-                    'username': username,
-                    'password': password
-                })
-                
-                self.stdout.write(self.style.SUCCESS(
-                    f'  ✓ Usuario creado: {username} para {responsable.apellidos_nombres} ({area.nombre})'
-                ))
-            else:
-                # Ya tiene usuario, solo asegurarse de que esté en el grupo
-                if not responsable.usuario.groups.filter(name='Responsable de Área').exists():
-                    responsable.usuario.groups.add(grupo_responsable)
+                # Username: primera letra del nombre + primer apellido (minúsculas, sin acentos)
+                username_base = f"{primer_nombre[0]}{primer_apellido}".lower() if primer_nombre and primer_apellido else responsable.nro_doc
+                username_base = self._quitar_acentos(username_base)
+
+                # Verificar si el username ya existe y agregar número si es necesario
+                username = username_base
+                contador = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{username_base}{contador}"
+                    contador += 1
+
+                # Crear usuario si no tiene uno asignado
+                if not responsable.usuario:
+                    # Contraseña temporal: responsable123
+                    password = 'responsable123'
+                    
+                    user = User.objects.create_user(
+                        username=username,
+                        email=responsable.correo_corporativo or responsable.correo_personal or f'{username}@empresa.com',
+                        password=password,
+                        first_name=primer_nombre[:30],
+                        last_name=primer_apellido[:150]
+                    )
+                    
+                    # Asignar al grupo
+                    user.groups.add(grupo_responsable)
+                    user.is_staff = True  # Puede acceder al admin si es necesario
+                    user.save()
+                    
+                    # Vincular usuario con personal
+                    responsable.usuario = user
+                    responsable.save()
+                    
+                    usuarios_creados.append({
+                        'area': area.nombre,
+                        'responsable': responsable.apellidos_nombres,
+                        'username': username,
+                        'password': password
+                    })
+                    
                     self.stdout.write(self.style.SUCCESS(
-                        f'  ✓ Grupo asignado a: {responsable.usuario.username} ({responsable.apellidos_nombres})'
+                        f'  ✓ Usuario creado: {username} para {responsable.apellidos_nombres} ({area.nombre})'
                     ))
                 else:
-                    self.stdout.write(self.style.WARNING(
-                        f'  ⚠ Usuario ya existe: {responsable.usuario.username} ({responsable.apellidos_nombres})'
-                    ))
+                    # Ya tiene usuario, solo asegurarse de que esté en el grupo
+                    if not responsable.usuario.groups.filter(name='Responsable de Área').exists():
+                        responsable.usuario.groups.add(grupo_responsable)
+                        self.stdout.write(self.style.SUCCESS(
+                            f'  ✓ Grupo asignado a: {responsable.usuario.username} ({responsable.apellidos_nombres})'
+                        ))
+                    else:
+                        self.stdout.write(self.style.WARNING(
+                            f'  ⚠ Usuario ya existe: {responsable.usuario.username} ({responsable.apellidos_nombres})'
+                        ))
         
         # Mostrar resumen
         if usuarios_creados:
